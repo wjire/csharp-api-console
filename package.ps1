@@ -66,7 +66,7 @@ Write-Host "Compilation successful" -ForegroundColor Green
 
 # Package
 Write-Host "Packaging extension..." -ForegroundColor Yellow
-vsce package
+vsce package --baseContentUrl https://gitee.com/dankit/csharp-api-console/raw/master --baseImagesUrl https://gitee.com/dankit/csharp-api-console/raw/master
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Packaging failed" -ForegroundColor Red
     exit 1

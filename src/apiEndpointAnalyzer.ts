@@ -1,18 +1,12 @@
 import * as vscode from 'vscode';
-import { ApiEndpoint, ApiParameter, ParameterSource } from './models/apiEndpoint';
+import { ApiEndpoint } from './models/apiEndpoint';
 
 /**
  * API 端点分析器
  * 检测 C# Controller 中的 API 端点，解析参数信息
  */
 export class ApiEndpointAnalyzer {
-    // 匹配参数定义：[FromQuery] string name, [FromBody] User user, int id
-    private readonly parameterRegex = /(?:\[(?:FromQuery|FromBody|FromHeader|FromRoute)\])?\s*(\w+(?:<[^>]+>)?)\s+(\w+)/g;
-
-    // 匹配特性：[FromQuery], [FromBody], [FromHeader], [FromRoute]
-    private readonly fromAttributeRegex = /\[From(Query|Body|Header|Route)\]/;
-
-    // 🚀 ApiVersion 缓存：Key = filePath + controllerName, Value = version | null
+    // ApiVersion 缓存：Key = filePath + controllerName, Value = version | null
     // 避免同一个控制器的多个 action 重复查找
     private apiVersionCache = new Map<string, string | null>();
 
@@ -58,10 +52,7 @@ export class ApiEndpointAnalyzer {
         // 构建完整路由
         const fullRoute = this.buildFullRoute(controllerRoute, routeTemplate, controllerName, methodName, lines, methodLine, document.uri.fsPath);
 
-        // 解析参数
-        const parameters = this.parseMethodParameters(lines, methodLine, fullRoute);
-
-        // 🚀 性能优化：延迟加载项目配置
+        // 性能优化：延迟加载项目配置
         // 不在扫描时查找项目文件和读取配置，而是在用户点击时才加载
         // 这样可以大幅减少文件 I/O 操作，提升扫描速度
 
@@ -72,13 +63,10 @@ export class ApiEndpointAnalyzer {
             action: methodName,
             filePath: document.uri.fsPath,
             lineNumber: methodLine + 1,
-            parameters
+            projectPath: await ApiEndpointAnalyzer.findProjectFile(document.uri.fsPath)
         };
     }
 
-    /**
-     * 判断是否是方法定义行（公共静态方法，供外部调用）
-     */
     public static isMethodDefinition(line: string): boolean {
         const methodRegex = /(?:public|private|protected|internal)\s+(?:async\s+)?(?:Task<)?[\w<>]+(?:>)?\s+\w+\s*\(/;
         return methodRegex.test(line);
@@ -233,7 +221,7 @@ export class ApiEndpointAnalyzer {
             }
         }
 
-        // 🚀 替换 API 版本占位符 {version:apiVersion}, {v:apiVersion} 等
+        // ⚡ 替换 API 版本占位符 {version:apiVersion}, {v:apiVersion} 等
         route = this.replaceApiVersionPlaceholder(route, lines, methodLine, controllerName, filePath);
 
         // 确保以 / 开头
@@ -244,78 +232,8 @@ export class ApiEndpointAnalyzer {
         return route || '/';
     }
 
-    /**
-     * 解析方法参数
-     */
-    private parseMethodParameters(lines: string[], methodLine: number, routeTemplate: string): ApiParameter[] {
-        const parameters: ApiParameter[] = [];
-
-        // 提取路由中的路径参数 {id}, {name} 等
-        const pathParams = this.extractPathParameters(routeTemplate);
-
-        // 找到方法签名（可能跨多行）
-        let methodSignature = this.getMethodSignature(lines, methodLine);
-
-        // 解析参数
-        this.parameterRegex.lastIndex = 0;
-        let match;
-
-        while ((match = this.parameterRegex.exec(methodSignature)) !== null) {
-            const paramType = match[1];
-            const paramName = match[2];
-
-            // 确定参数来源
-            let source: ParameterSource;
-
-            // 检查参数前是否有 [From*] 特性
-            const beforeParam = methodSignature.substring(0, match.index);
-            const fromAttrMatch = this.fromAttributeRegex.exec(beforeParam.split(',').pop() || '');
-
-            if (fromAttrMatch) {
-                const attr = fromAttrMatch[1];
-                if (attr === 'Query') {
-                    source = ParameterSource.Query;
-                } else if (attr === 'Body') {
-                    source = ParameterSource.Body;
-                } else if (attr === 'Header') {
-                    source = ParameterSource.Header;
-                } else if (attr === 'Route') {
-                    source = ParameterSource.Path;
-                } else {
-                    source = ParameterSource.Query; // 默认
-                }
-            } else if (pathParams.includes(paramName.toLowerCase())) {
-                // 如果参数名在路由模板中，则是路径参数
-                source = ParameterSource.Path;
-            } else if (paramType.toLowerCase() === 'cancellationtoken') {
-                // 跳过 CancellationToken
-                continue;
-            } else {
-                // 根据 HTTP 方法推断
-                // GET/DELETE 默认 Query，POST/PUT 默认 Body
-                const lastHttpMatch = methodSignature.match(/\[(HttpGet|HttpPost|HttpPut|HttpDelete)/);
-                if (lastHttpMatch) {
-                    const method = lastHttpMatch[1];
-                    source = (method === 'HttpGet' || method === 'HttpDelete')
-                        ? ParameterSource.Query
-                        : ParameterSource.Body;
-                } else {
-                    source = ParameterSource.Query;
-                }
-            }
-
-            parameters.push({
-                name: paramName,
-                type: paramType,
-                source,
-                required: true // 简化处理，都标记为必需
-            });
-        }
-
-        return parameters;
-    }
-
-    /**     * 替换路由中的 API 版本占位符
+    /**     
+     * 替换路由中的 API 版本占位符
      * 支持任意变量名 + :apiVersion 约束，如 {version:apiVersion}, {v:apiVersion} 等
      */
     private replaceApiVersionPlaceholder(
@@ -363,7 +281,7 @@ export class ApiEndpointAnalyzer {
         controllerName: string,
         filePath: string
     ): string | null {
-        // 🚀 检查缓存：同一个控制器只查找一次
+        // ⚡ 检查缓存：同一个控制器只查找一次
         const cacheKey = `${filePath}:${controllerName}`;
         if (this.apiVersionCache.has(cacheKey)) {
             return this.apiVersionCache.get(cacheKey)!;
@@ -379,7 +297,7 @@ export class ApiEndpointAnalyzer {
                 for (let j = i - 1; j >= 0 && j >= i - 20; j--) {
                     const attrLine = lines[j].trim();
 
-                    // 🚀 检查 1：跳过被注释的行
+                    // ⚡ 检查 1：跳过被注释的行
                     if (this.isCommentedLine(lines, j)) {
                         continue;
                     }
@@ -388,7 +306,7 @@ export class ApiEndpointAnalyzer {
                     const match = attrLine.match(/\[ApiVersion\s*\(\s*["']([\d.]+)["']/i);
                     if (match) {
                         const version = match[1];
-                        // 🚀 存入缓存
+                        // ⚡ 存入缓存
                         this.apiVersionCache.set(cacheKey, version);
                         return version;
                     }
@@ -402,7 +320,7 @@ export class ApiEndpointAnalyzer {
             }
         }
 
-        // 🚀 未找到，缓存 null
+        // 未找到，缓存 null
         this.apiVersionCache.set(cacheKey, null);
         return null;
     }
@@ -439,54 +357,6 @@ export class ApiEndpointAnalyzer {
         }
 
         return inComment;
-    }
-
-    /**     * 提取路由模板中的路径参数
-     */
-    private extractPathParameters(routeTemplate: string): string[] {
-        const pathParams: string[] = [];
-        const regex = /\{(\w+)(?::\w+)?\}/g;
-        let match;
-
-        while ((match = regex.exec(routeTemplate)) !== null) {
-            pathParams.push(match[1].toLowerCase());
-        }
-
-        return pathParams;
-    }
-
-    /**
-     * 获取完整的方法签名（可能跨多行）
-     */
-    private getMethodSignature(lines: string[], startLine: number): string {
-        let signature = '';
-        let braceCount = 0;
-        let foundOpen = false;
-
-        // 向上查找特性
-        for (let i = Math.max(0, startLine - 10); i <= startLine; i++) {
-            signature += lines[i] + ' ';
-        }
-
-        // 向下查找到方法签名结束
-        for (let i = startLine + 1; i < lines.length && i < startLine + 10; i++) {
-            const line = lines[i];
-            signature += line + ' ';
-
-            for (const char of line) {
-                if (char === '(') {
-                    foundOpen = true;
-                    braceCount++;
-                } else if (char === ')') {
-                    braceCount--;
-                    if (foundOpen && braceCount === 0) {
-                        return signature;
-                    }
-                }
-            }
-        }
-
-        return signature;
     }
 
     /**

@@ -8,8 +8,6 @@ import { ProjectConfigCache } from './projectConfigCache';
  * 插件激活入口
  */
 export function activate(context: vscode.ExtensionContext) {
-    console.log('C# API Console 插件已激活');
-
     // 获取工作区根目录
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceRoot) {
@@ -60,5 +58,5 @@ export function activate(context: vscode.ExtensionContext) {
  * 插件停用
  */
 export function deactivate() {
-    console.log('C# API Console 插件已停用');
+    // 清理资源
 }

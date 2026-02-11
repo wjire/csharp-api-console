@@ -104,7 +104,6 @@ export class ProjectConfigCache {
 
         if (this.baseUrlCache.has(projectDir)) {
             this.baseUrlCache.delete(projectDir);
-            console.log(`[ProjectConfigCache] Cleared Base URL cache for: ${projectDir}`);
         }
     }
 
@@ -114,6 +113,5 @@ export class ProjectConfigCache {
     clearAllCache(): void {
         this.projectDirCache.clear();
         this.baseUrlCache.clear();
-        console.log('[ProjectConfigCache] All cache cleared');
     }
 }

@@ -882,29 +882,8 @@
 
             document.getElementById('urlInput').value = apiEndpoint.fullUrl || apiEndpoint.routeTemplate;
 
-            // Populate headers
-            const headerParams = apiEndpoint.parameters.filter(p => p.source === 'Header');
-            populateParams('headersList', headerParams);
-
             // Query parameters list starts empty - users can add them manually
             document.getElementById('queryList').innerHTML = '';
-        }
-
-        // Populate parameter rows
-        function populateParams(listId, params) {
-            const list = document.getElementById(listId);
-            list.innerHTML = '';
-
-            params.forEach(param => {
-                const row = document.createElement('div');
-                row.className = 'param-row';
-                row.innerHTML = `
-                    <input type="text" class="param-input" placeholder="Key" value="${param.name}" />
-                    <input type="text" class="param-input" placeholder="Value" />
-                    <button class="remove-button" onclick="removeRow(this)">Remove</button>
-                `;
-                list.appendChild(row);
-            });
         }
 
         // Update API endpoint (when switching between different APIs)

@@ -4,13 +4,12 @@ import { CodeLensCache } from './services/codeLensCache';
 
 /**
  * CodeLens 提供者
- * 在 C# Controller 的 Action 方法上显示 "⚡ Test Endpoint" 按钮
  */
 export class CodeLensProvider implements vscode.CodeLensProvider {
     private analyzer: ApiEndpointAnalyzer;
     private cache: CodeLensCache;
 
-    // 🚀 正则表达式缓存，避免每次调用都重新编译
+    // 正则表达式缓存，避免每次调用都重新编译
     private readonly methodNameRegex = /\s+(\w+)\s*\(/;
 
     constructor(analyzer: ApiEndpointAnalyzer) {
@@ -36,7 +35,7 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
             return [];
         }
 
-        // 🚀 检查缓存：如果文档版本号未变化，直接返回缓存结果
+        // 检查缓存：如果文档版本号未变化，直接返回缓存结果
         const cacheKey = document.uri.toString();
         const cached = this.cache.get(cacheKey);
 
@@ -65,8 +64,6 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
         );
     }
 
-
-
     /**
      * 扫描文档，查找所有 API 端点并生成 CodeLens
      */
@@ -85,7 +82,7 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
                 continue;
             }
 
-            // 🚀 直接调用 detectApiEndpoint，所有解析逻辑统一在 Analyzer 中
+            // ⚡ 直接调用 detectApiEndpoint，所有解析逻辑统一在 Analyzer 中
             // 包括：HTTP 特性检查、[action] 占位符处理、边界检查等
             const position = new vscode.Position(i, 0);
             const apiEndpoint = await this.analyzer.detectApiEndpoint(document, position);
@@ -95,11 +92,11 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
             }
 
             // 创建 CodeLens 并立即设置命令
-            // 🚀 定位到方法名位置（而不是行首），确保显示在"引用"右侧
+            // ⚡ 定位到方法名位置（而不是行首），确保显示在"引用"右侧
             const methodNameColumn = this.findMethodNameColumn(line);
             const range = new vscode.Range(i, methodNameColumn, i, methodNameColumn);
 
-            // 🚀 显示完整路由信息（不含 baseUrl）
+            // ⚡ 显示完整路由信息（不含 baseUrl）
             const title = `⚡ ${apiEndpoint.httpMethod} ${apiEndpoint.routeTemplate}`;
 
             const codeLens = new vscode.CodeLens(range, {

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { ApiEndpoint, ParameterSource } from './models/apiEndpoint';
+import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
-import { HttpClient, HttpRequestOptions } from './services/httpClient';
+import { HttpClient } from './services/httpClient';
 
 /**
  * API 控制台面板
@@ -86,11 +86,10 @@ export class ApiConsolePanel {
             case 'webviewReady':
                 // WebView 已准备好，发送初始化数据
                 if (this.pendingApiEndpoint) {
-                    // 🚀 性能优化：延迟加载项目配置
+                    // 性能优化：延迟加载项目配置
                     // 仅在用户点击测试按钮时才查找项目文件和读取配置
                     await this.enrichApiEndpoint(this.pendingApiEndpoint);
 
-                    console.log('[ApiConsolePanel] Sending initialize message with:', this.pendingApiEndpoint.action, this.pendingApiEndpoint.routeTemplate);
                     this.panel.webview.postMessage({
                         type: 'initialize',
                         data: this.pendingApiEndpoint

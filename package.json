@@ -1,0 +1,91 @@
+{
+    "name": "csharp-api-console",
+    "displayName": "C# API Console",
+    "description": "A lightweight API debugging console for C# ASP.NET Core — test endpoints instantly with CodeLens.",
+    "version": "1.0.0",
+    "publisher": "dankit",
+    "icon": "resources/icons/icon.png",
+    "repository": {
+        "type": "git",
+        "url": "https://gitee.com/dankit/csharp-api-console"
+    },
+    "bugs": {
+        "url": "https://gitee.com/dankit/csharp-api-console/issues"
+    },
+    "homepage": "https://gitee.com/dankit/csharp-api-console#readme",
+    "license": "MIT",
+    "keywords": [
+        "api",
+        "route",
+        "routes",
+        "explorer",
+        "csharp",
+        "aspnet",
+        "aspnet core",
+        "dotnet",
+        "controller",
+        "endpoint",
+        "rest api",
+        "web api",
+        "route analyzer",
+        "api explorer",
+        "debug"
+    ],
+    "galleryBanner": {
+        "color": "#007ACC",
+        "theme": "dark"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:csharp"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "csharpApiConsole.testEndpoint",
+                "title": "⚡ Test Endpoint"
+            }
+        ],
+        "configuration": {
+            "title": "C# API Console",
+            "properties": {
+                "csharpApiConsole.codeLensDebounceDelay": {
+                    "type": "number",
+                    "default": 300,
+                    "minimum": 0,
+                    "maximum": 1000,
+                    "description": "CodeLens scanning debounce delay in milliseconds. Prevents excessive rescanning when typing quickly. (0 = no debounce)"
+                },
+                "csharpApiConsole.defaultApiVersion": {
+                    "type": "string",
+                    "default": "1.0",
+                    "description": "Default API version when controller has no [ApiVersion] attribute (default: '1.0', same as ASP.NET Core official default). Set to empty string to keep placeholder unreplaced."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.85.0",
+        "@types/node": "20.x",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.3",
+        "@vscode/test-electron": "^2.3.8"
+    }
+}

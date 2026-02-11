@@ -1,7 +1,7 @@
 {
     "name": "csharp-api-console",
     "displayName": "C# API Console",
-    "description": "A lightweight API debugging console for C# ASP.NET Core — test endpoints instantly with CodeLens.",
+    "description": "⚡ Lightweight API testing tool for ASP.NET Core - Test endpoints instantly with CodeLens, no tool switching needed!",
     "version": "1.0.0",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
@@ -16,20 +16,32 @@
     "license": "MIT",
     "keywords": [
         "api",
-        "route",
-        "routes",
-        "explorer",
+        "api testing",
+        "api client",
+        "rest",
+        "rest api",
+        "restful",
+        "http",
+        "http client",
         "csharp",
+        "c#",
         "aspnet",
         "aspnet core",
+        "asp.net",
         "dotnet",
+        ".net",
         "controller",
         "endpoint",
-        "rest api",
         "web api",
-        "route analyzer",
-        "api explorer",
-        "debug"
+        "codelens",
+        "testing",
+        "debug",
+        "debugger",
+        "postman",
+        "insomnia",
+        "route",
+        "routes",
+        "api explorer"
     ],
     "galleryBanner": {
         "color": "#007ACC",
@@ -40,7 +52,8 @@
     },
     "categories": [
         "Programming Languages",
-        "Other"
+        "Testing",
+        "Debuggers"
     ],
     "activationEvents": [
         "onLanguage:csharp"
@@ -61,12 +74,12 @@
                     "default": 300,
                     "minimum": 0,
                     "maximum": 1000,
-                    "description": "CodeLens scanning debounce delay in milliseconds. Prevents excessive rescanning when typing quickly. (0 = no debounce)"
+                    "description": "CodeLens scanning debounce delay in milliseconds. Prevents excessive rescanning when typing quickly. (0 = no debounce) | CodeLens 扫描防抖延迟（毫秒），避免输入时频繁扫描。（0 = 禁用防抖）"
                 },
                 "csharpApiConsole.defaultApiVersion": {
                     "type": "string",
                     "default": "1.0",
-                    "description": "Default API version when controller has no [ApiVersion] attribute (default: '1.0', same as ASP.NET Core official default). Set to empty string to keep placeholder unreplaced."
+                    "description": "Default API version when controller has no [ApiVersion] attribute. Set to empty string to keep placeholder unreplaced. | 控制器无 [ApiVersion] 特性时的默认版本。留空则不替换占位符。"
                 }
             }
         }

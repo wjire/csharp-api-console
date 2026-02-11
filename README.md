@@ -1,104 +1,174 @@
 # C# API Console
 
-轻量、直观的 C# Web API 调试工具
-A lightweight and intuitive API debugging console for C# developers
+> ⚡ **轻量、直观的 ASP.NET Core API 调试工具**  
+> A lightweight and intuitive API debugging console for C# developers
 
-🚀 **快速测试和调试 ASP.NET Core API 端点**  
-A VS Code extension for quickly testing C# Web API endpoints directly from your code editor.
+在代码中一键测试 API 端点，无需离开编辑器，无需切换工具！  
+Test API endpoints with one click directly in your code editor - no tool switching needed!
 
----
-
-## ✨ 功能特性 | Features
-
-### 🎯 核心能力 | Core Capabilities
-
-- 🚀 **CodeLens 集成**：在 C# Controller 的 Action 方法上显示 "⚡ Test Endpoint" 按钮  
-  **CodeLens integration**: Shows "⚡ Test Endpoint" button on Controller Action methods
-
-- 🎯 **自动检测端点**：自动识别 HTTP Method（GET/POST/PUT/DELETE）和路由路径  
-  **Auto-detection**: Automatically detects HTTP methods and route paths
-
-- 🔐 **认证支持**：支持 Bearer Token 认证  
-  **Authentication**: Bearer Token authentication support
-
-- 📝 **参数识别**：自动识别 Query、Body、Header 和 Path 参数  
-  **Parameter detection**: Automatically identifies Query, Body, Header, and Path parameters
-
-- 📊 **响应显示**：显示 HTTP 状态码、响应头和格式化的 JSON 响应  
-  **Response display**: Shows status code, headers, and formatted JSON response
-
-- ⚡ **快速测试**：一键发送请求，实时查看结果  
-  **Quick testing**: Send requests with one click and see results instantly
+[![Version](https://img.shields.io/visual-studio-marketplace/v/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
 
 ---
 
-## 🎨 UI 特性 | UI Highlights
+## 📷 预览 | Preview
 
-- 🧭 **CodeLens 按钮**：直接在代码中显示测试按钮，无需切换视图  
-  **CodeLens button**: Test buttons appear directly in your code
+![功能截图](https://gitee.com/dankit/csharp-api-console/raw/master/resources/image1.png)
 
-- 🧾 **清晰的测试面板**：分标签页管理认证、请求头、查询参数和请求体  
-  **Clean test panel**: Organized tabs for auth, headers, query params, and body
-
-- 🛠️ **自动填充**：根据代码自动填充路由路径和参数  
-  **Auto-fill**: Automatically fills route paths and parameters from your code
+![功能截图](https://gitee.com/dankit/csharp-api-console/raw/master/resources/image2.png)
 
 ---
 
-## 📷 截图 | Screenshots
+## ✨ 核心特性 | Key Features
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/raw/master/resources/image.png)
+### 🎯 **CodeLens 集成** | CodeLens Integration
 
----
+- 在每个 Controller Action 方法上自动显示测试按钮  
+  Auto-show test button above each Controller Action method
+
+- 精确定位到方法名位置，与"引用"按钮并列显示  
+  Precisely positioned at method name, displayed alongside "References" button
+
+- 支持同时打开多个测试标签页  
+  Support opening multiple test tabs simultaneously
+
+### ⚡ **智能端点检测** | Smart Endpoint Detection
+
+- 自动识别 `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpDelete]` 特性  
+  Auto-detect HTTP method attributes
+
+- 解析 `[Route]` 特性，支持控制器和方法级路由  
+  Parse `[Route]` attributes at controller and method levels
+
+- 智能处理 `[controller]`, `[action]` 占位符  
+  Smart handling of `[controller]` and `[action]` placeholders
+
+- 支持 `[ApiVersion]` 特性和自定义默认版本  
+  Support `[ApiVersion]` attribute with configurable default version
+
+### 🔗 **自动配置 Base URL** | Auto Base URL Configuration
+
+- 自动读取项目的 `launchSettings.json` 文件  
+  Auto-read project's `launchSettings.json` file
+
+- 智能解析 `applicationUrl` 和 `launchUrl`，自动构建完整的 API 端点 URL  
+  Smart parse `applicationUrl` and `launchUrl` to build complete endpoint URLs
+
+- 实时监听文件变化，配置更新后自动刷新  
+  Real-time file watching, auto-refresh when configuration changes
+
+- 无需手动输入 Base URL，开箱即用  
+  No need to manually input Base URL, works out of the box
 
 ## 🧪 使用方法 | Usage
 
-### 快速开始 | Getting Started
+### 快速开始 | Quick Start
 
-1. 打开包含 C# Controller 的文件  
-   Open a file containing a C# Controller
+1. **打开 Controller 文件**  
+   Open a C# Controller file
 
-2. 在 Action 方法上方会显示 "⚡ Test Endpoint" 按钮  
-   The "⚡ Test Endpoint" button will appear above Action methods
+2. **查看 CodeLens 按钮**  
+   You'll see a CodeLens button above each Action method:
+   ```
+   ⚡ GET /api/users
+   ```
 
-3. 点击按钮打开测试面板  
+3. **点击按钮打开测试面板**  
    Click the button to open the test panel
 
-4. 填写必要的参数（Token、Headers、Query、Body）  
-   Fill in necessary parameters (Token, Headers, Query, Body)
+4. **配置请求**（可选）  
+   Configure your request (optional):
+   - **Auth**: 添加 Bearer Token | Add Bearer Token
+   - **Headers**: 添加自定义请求头 | Add custom headers
+   - **Query**: 设置查询参数 | Set query parameters
+   - **Body**: 编辑请求体（POST/PUT） | Edit request body (for POST/PUT)
 
-5. 点击 "Send" 发送请求  
-   Click "Send" to make the request
+5. **发送请求并查看响应**  
+   Click "Send" and view the response
 
-6. 查看响应结果  
-   View the response
+### 支持的路由格式 | Supported Route Formats
 
-### 测试面板 | Test Panel
+```csharp
+// ✅ 控制器级路由 | Controller-level route
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
 
-测试面板包含以下标签页：  
-The test panel includes the following tabs:
+// ✅ 方法级路由 | Method-level route
+[HttpGet("query")]
+public IActionResult Query() { }
 
-- **Auth**: Bearer Token 认证  
-  Bearer Token authentication
+// ✅ 路由参数 | Route parameters
+[HttpGet("{id}")]
+public IActionResult GetById(int id) { }
 
-- **Headers**: 自定义 HTTP 头  
-  Custom HTTP headers
+// ✅ [action] 占位符 | [action] placeholder
+[Route("api/[controller]/[action]")]
+public class TestController : ControllerBase
+{
+    public IActionResult Test1() { }  // → /api/test/Test1
+}
 
-- **Query**: URL 查询参数  
-  URL query parameters
+// ✅ API 版本 | API versioning
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
+public class ProductsController : ControllerBase
+```
 
-- **Body**: JSON 请求体（POST/PUT 请求）  
-  JSON request body (for POST/PUT requests)
+---
+
+## ⚙️ 配置 | Configuration
+
+在 VS Code 设置中搜索 `C# API Console`:  
+Search for `C# API Console` in VS Code settings:
+
+### `csharpApiConsole.codeLensDebounceDelay`
+- **类型 | Type**: `number`
+- **默认值 | Default**: `300`
+- **说明 | Description**:  
+  CodeLens 扫描防抖延迟（毫秒）。设置为 0 禁用防抖。  
+  CodeLens scanning debounce delay in milliseconds. Set to 0 to disable.
+
+### `csharpApiConsole.defaultApiVersion`
+- **类型 | Type**: `string`
+- **默认值 | Default**: `"1.0"`
+- **说明 | Description**:  
+  控制器无 `[ApiVersion]` 特性时的默认版本。留空则不替换占位符。  
+  Default API version when controller has no `[ApiVersion]` attribute. Leave empty to keep placeholder.
 
 ---
 
 ## 📦 安装 | Installation
 
-1. 从 VS Code 扩展市场搜索 "C# API Console"  
-   Search for "C# API Console" in the VS Code Extensions Marketplace
+1. 打开 VS Code 扩展面板 (`Ctrl+Shift+X` / `Cmd+Shift+X`)  
+   Open VS Code Extensions panel
 
-2. 点击安装  
+2. 搜索 "**C# API Console**"  
+   Search for "C# API Console"
+
+3. 点击 **Install**  
    Click Install
 
-3. 重新加载 VS Code  
-   Reload VS Code
+4. 打开任意 C# Controller 文件即可使用  
+   Open any C# Controller file to start testing
+
+---
+
+## 🤝 反馈与支持 | Feedback & Support
+
+- **报告问题** | Report Issues: [Gitee Issues](https://gitee.com/dankit/csharp-api-console/issues)
+- **功能建议** | Feature Requests: [Gitee Issues](https://gitee.com/dankit/csharp-api-console/issues)
+- **源代码** | Source Code: [Gitee Repository](https://gitee.com/dankit/csharp-api-console)
+
+---
+
+## 📝 许可证 | License
+
+[MIT License](LICENSE)
+
+---
+
+## 🎉 享受编码！ | Happy Coding!
+
+如果这个扩展对你有帮助，请给我们一个 ⭐ Star！  
+If you find this extension helpful, please give us a ⭐ Star!

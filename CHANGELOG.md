@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.2] - 2026-02-12
+
+### 🎨 界面优化 | UI Improvements
+
+- **请求状态反馈**：点击 Send 按钮后自动置灰，防止重复提交
+- **Request status feedback**: Send button is automatically disabled after clicking to prevent duplicate submissions
+- **加载状态提示**：发送请求时显示"正在发送中..."提示，响应完成后恢复
+- **Loading state indicator**: Display "Sending..." message while request is in progress, restore after completion
+
+---
+
 ## [1.0.1] - 2026-02-12
 
 ### 🐛 Bug 修复 | Bug Fixes

@@ -172,6 +172,12 @@
             background-color: #2fa866;
         }
 
+        .send-button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--vscode-panel-border);
@@ -823,6 +829,11 @@
                 return;
             }
 
+            // Disable button and show loading
+            const sendButton = document.getElementById('sendButton');
+            sendButton.disabled = true;
+            showLoading();
+
             const method = currentApiEndpoint.httpMethod;
             const baseUrl = document.getElementById('baseUrlInput').value;
             const route = document.getElementById('routeInput').value;
@@ -965,8 +976,27 @@
             }
         }
 
+        // Show loading state
+        function showLoading() {
+            const statusValue = document.getElementById('statusValue');
+            statusValue.textContent = '正在发送中... / Sending request...';
+            statusValue.className = 'status-value';
+
+            document.getElementById('sizeValue').textContent = '-';
+            document.getElementById('timeValue').textContent = '-';
+
+            document.getElementById('responseBody').innerHTML = '<span style="color: var(--vscode-descriptionForeground); font-style: italic;">正在发送请求，请稍候... / Sending request, please wait...</span>';
+            document.getElementById('lineNumbers').innerHTML = '<span class="line-number">1</span>';
+
+            document.getElementById('headerCount').textContent = '0';
+            document.getElementById('responseHeaders').innerHTML = '';
+        }
+
         // Display response
         function displayResponse(data) {
+            // Re-enable send button
+            document.getElementById('sendButton').disabled = false;
+
             // Escape HTML helper
             const escapeHtml = (text) => {
                 return text

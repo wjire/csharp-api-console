@@ -12,11 +12,18 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 
 ---
 
+## 📦 仓库地址 | Repository
+
+- **GitHub**: https://github.com/wjire/csharp-api-console
+- **Gitee (国内镜像)**: https://gitee.com/dankit/csharp-api-console
+
+---
+
 ## 📷 预览 | Preview
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/raw/master/resources/image1.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/image1.png)
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/raw/master/resources/image2.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/image2.png)
 
 ---
 
@@ -156,9 +163,10 @@ Search for `C# API Console` in VS Code settings:
 
 ## 🤝 反馈与支持 | Feedback & Support
 
-- **报告问题** | Report Issues: [Gitee Issues](https://gitee.com/dankit/csharp-api-console/issues)
-- **功能建议** | Feature Requests: [Gitee Issues](https://gitee.com/dankit/csharp-api-console/issues)
-- **源代码** | Source Code: [Gitee Repository](https://gitee.com/dankit/csharp-api-console)
+- **报告问题** | Report Issues: [GitHub Issues](https://github.com/wjire/csharp-api-console/issues)
+- **功能建议** | Feature Requests: [GitHub Issues](https://github.com/wjire/csharp-api-console/issues)
+- **源代码** | Source Code: [GitHub Repository](https://github.com/wjire/csharp-api-console)
+- **国内镜像** | China Mirror: [Gitee Repository](https://gitee.com/dankit/csharp-api-console)
 
 ---
 

@@ -7,12 +7,12 @@
     "icon": "resources/icons/icon.png",
     "repository": {
         "type": "git",
-        "url": "https://gitee.com/dankit/csharp-api-console"
+        "url": "https://github.com/wjire/csharp-api-console"
     },
     "bugs": {
-        "url": "https://gitee.com/dankit/csharp-api-console/issues"
+        "url": "https://github.com/wjire/csharp-api-console/issues"
     },
-    "homepage": "https://gitee.com/dankit/csharp-api-console#readme",
+    "homepage": "https://github.com/wjire/csharp-api-console#readme",
     "license": "MIT",
     "keywords": [
         "api",

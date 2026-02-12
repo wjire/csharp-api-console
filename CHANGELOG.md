@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.1] - 2026-02-12
+
+### 🐛 Bug 修复 | Bug Fixes
+
+- **修复可空类型解析**：支持 `Task<long?>`, `Task<Person?>` 等可空泛型返回类型的方法识别
+- **Fixed nullable type parsing**: Support method detection with nullable generic return types like `Task<long?>`, `Task<Person?>`
+
+---
+
 ## [1.0.0] - 2026-02-11
 
 ### 🎉 首次发布 | Initial Release

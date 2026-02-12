@@ -68,7 +68,7 @@ export class ApiEndpointAnalyzer {
     }
 
     public static isMethodDefinition(line: string): boolean {
-        const methodRegex = /(?:public|private|protected|internal)\s+(?:async\s+)?(?:Task<)?[\w<>]+(?:>)?\s+\w+\s*\(/;
+        const methodRegex = /(?:public|private|protected|internal)\s+(?:async\s+)?(?:Task<)?[\w<>?]+(?:>)?\s+\w+\s*\(/;
         return methodRegex.test(line);
     }
 
@@ -76,7 +76,7 @@ export class ApiEndpointAnalyzer {
      * 提取方法名
      */
     private extractMethodName(line: string): string | null {
-        const methodRegex = /(?:public|private|protected|internal)\s+(?:async\s+)?(?:Task<)?[\w<>]+(?:>)?\s+(\w+)\s*\(/;
+        const methodRegex = /(?:public|private|protected|internal)\s+(?:async\s+)?(?:Task<)?[\w<>?]+(?:>)?\s+(\w+)\s*\(/;
         const match = methodRegex.exec(line);
         return match ? match[1] : null;
     }

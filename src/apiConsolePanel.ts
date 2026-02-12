@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
 import { HttpClient } from './services/httpClient';
+import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
 
 /**
  * API 控制台面板
@@ -16,6 +18,9 @@ export class ApiConsolePanel {
     private pendingApiEndpoint: ApiEndpoint | null = null;
     private readonly projectConfigCache: ProjectConfigCache;
     private readonly httpClient: HttpClient;
+    private readonly baseUrlConfigManager: BaseUrlConfigManager;
+    private readonly context: vscode.ExtensionContext;
+    private currentProjectPath: string = '';
 
     /**
      * 创建或显示测试面板
@@ -24,7 +29,9 @@ export class ApiConsolePanel {
     public static createOrShow(
         extensionUri: vscode.Uri,
         apiEndpoint: ApiEndpoint,
-        projectConfigCache: ProjectConfigCache
+        projectConfigCache: ProjectConfigCache,
+        baseUrlConfigManager: BaseUrlConfigManager,
+        context: vscode.ExtensionContext
     ) {
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -49,20 +56,24 @@ export class ApiConsolePanel {
         panel.iconPath = new vscode.ThemeIcon('debug');
 
         // 创建新实例（不再复用 currentPanel）
-        new ApiConsolePanel(panel, extensionUri, apiEndpoint, projectConfigCache);
+        new ApiConsolePanel(panel, extensionUri, apiEndpoint, projectConfigCache, baseUrlConfigManager, context);
     }
 
     private constructor(
         panel: vscode.WebviewPanel,
         extensionUri: vscode.Uri,
         apiEndpoint: ApiEndpoint,
-        projectConfigCache: ProjectConfigCache
+        projectConfigCache: ProjectConfigCache,
+        baseUrlConfigManager: BaseUrlConfigManager,
+        context: vscode.ExtensionContext
     ) {
         this.panel = panel;
         this.extensionUri = extensionUri;
         this.pendingApiEndpoint = apiEndpoint;
         this.projectConfigCache = projectConfigCache;
         this.httpClient = new HttpClient();
+        this.baseUrlConfigManager = baseUrlConfigManager;
+        this.context = context;
 
         // 加载静态 HTML 内容
         this.panel.webview.html = this.getStaticHtml();
@@ -90,15 +101,29 @@ export class ApiConsolePanel {
                     // 仅在用户点击测试按钮时才查找项目文件和读取配置
                     await this.enrichApiEndpoint(this.pendingApiEndpoint);
 
+                    // 保存当前项目路径
+                    this.currentProjectPath = this.pendingApiEndpoint.projectPath || '';
+
+                    // 发送初始化数据
                     this.panel.webview.postMessage({
                         type: 'initialize',
                         data: this.pendingApiEndpoint
                     });
+
+                    // 主动发送 Base URLs（确保 currentProjectPath 已设置）
+                    await this.loadBaseUrls();
+
                     this.pendingApiEndpoint = null;
                 }
                 break;
             case 'sendRequest':
                 await this.sendHttpRequest(message.data);
+                break;
+            case 'requestBaseUrls':
+                await this.loadBaseUrls();
+                break;
+            case 'saveBaseUrls':
+                await this.saveBaseUrls(message.data);
                 break;
         }
     }
@@ -159,6 +184,37 @@ export class ApiConsolePanel {
             </body>
             </html>`;
         }
+    }
+
+    /**
+     * 加载保存的 Base URLs（从内存中读取）
+     */
+    private async loadBaseUrls() {
+        if (!this.currentProjectPath) {
+            this.panel.webview.postMessage({
+                type: 'loadBaseUrls',
+                data: []
+            });
+            return;
+        }
+
+        const projectBaseUrls = this.baseUrlConfigManager.getBaseUrls(this.currentProjectPath);
+
+        this.panel.webview.postMessage({
+            type: 'loadBaseUrls',
+            data: projectBaseUrls
+        });
+    }
+
+    /**
+     * 保存 Base URLs（同步更新内存，异步写入文件）
+     */
+    private async saveBaseUrls(baseUrls: string[]) {
+        if (!this.currentProjectPath) {
+            return;
+        }
+
+        this.baseUrlConfigManager.saveBaseUrls(this.currentProjectPath, baseUrls);
     }
 
     /**

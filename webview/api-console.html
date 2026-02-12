@@ -87,95 +87,187 @@
 
         .request-section {
             background-color: var(--vscode-editor-background);
-            padding: 20px;
+            padding: 10px;
         }
 
         .url-section {
             display: flex;
-            gap: 10px;
+            gap: 0;
             margin-bottom: 15px;
-            align-items: center;
+            align-items: stretch;
             flex-wrap: wrap;
         }
 
         .url-inputs-container {
             display: flex;
             flex: 1;
-            gap: 5px;
+            gap: 0;
             align-items: center;
             min-width: 300px;
         }
 
+        .base-url-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
         .http-method {
-            padding: 8px 16px;
+            padding: 10px 16px;
             background-color: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
-            border-radius: 4px;
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px 0 0 4px;
             font-weight: bold;
             min-width: 80px;
             text-align: center;
+            line-height: 1.5;
+            height: 42px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .http-method.GET {
             background-color: #61affe;
+            border-color: #61affe;
         }
 
         .http-method.POST {
             background-color: #49cc90;
+            border-color: #49cc90;
         }
 
         .http-method.PUT {
             background-color: #fca130;
+            border-color: #fca130;
         }
 
         .http-method.DELETE {
             background-color: #f93e3e;
+            border-color: #f93e3e;
         }
 
-        .base-url-input {
-            flex: 0 0 200px;
-            padding: 8px 12px;
+        .base-url-select {
+            flex: 1 1 auto;
+            /* min-width: 180px; */
+            max-width: 400px;
+            padding: 10px 1px 10px 32px;
             background-color: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
             border: 1px solid var(--vscode-input-border);
-            border-radius: 4px 0 0 4px;
+            border-left: none;
+            border-radius: 0;
             font-family: monospace;
             border-right: none;
+            appearance: none;
+            cursor: pointer;
+            background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"%3E%3Cpath fill="%23C5C5C5" d="M6 9L1 4h10z"/%3E%3C/svg%3E');
+            background-repeat: no-repeat;
+            background-position: left 8px center;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            line-height: 1.5;
+            height: 42px;
+            box-sizing: border-box;
+        }
+
+        .base-url-action-btn {
+            width: 28px;
+            height: 28px;
+            background-color: transparent;
+            color: var(--vscode-foreground);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .base-url-action-btn:hover {
+            background-color: var(--vscode-toolbar-hoverBackground);
+            opacity: 1;
+        }
+
+        .base-url-action-btn:disabled {
+            display: none;
         }
 
         .route-input {
             flex: 1;
-            padding: 8px 12px;
+            padding: 10px 12px 10px 0px;
             background-color: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
             border: 1px solid var(--vscode-input-border);
-            border-radius: 0 4px 4px 0;
+            border-radius: 0;
             font-family: monospace;
             min-width: 150px;
+            line-height: 1.5;
+            height: 42px;
+            box-sizing: border-box;
         }
 
         .send-button {
-            padding: 8px 24px;
+            padding: 10px 24px;
             background-color: #49cc90;
             color: white;
-            border: none;
-            border-radius: 4px;
+            border: 1px solid #49cc90;
+            border-radius: 0;
             cursor: pointer;
             font-weight: bold;
+            line-height: 1.5;
+            height: 42px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .send-button:hover {
             background-color: #3eb878;
+            border-color: #3eb878;
         }
 
         .send-button:active {
             background-color: #2fa866;
+            border-color: #2fa866;
         }
 
         .send-button:disabled {
             background-color: #6c757d;
+            border-color: #6c757d;
             cursor: not-allowed;
             opacity: 0.6;
+        }
+
+        .manage-baseurl-btn {
+            padding: 10px 12px;
+            background-color: transparent;
+            color: var(--vscode-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: all 0.2s;
+            line-height: 1.5;
+            height: 42px;
+            box-sizing: border-box;
+        }
+
+        .manage-baseurl-btn:hover {
+            background-color: var(--vscode-toolbar-hoverBackground);
+            opacity: 1;
         }
 
         .tabs {
@@ -268,7 +360,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            padding: 30px;
+            padding: 25px;
         }
 
         #responseContent {
@@ -475,6 +567,192 @@
             margin-top: 5px;
         }
 
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 6px;
+            padding: 20px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--vscode-foreground);
+        }
+
+        .modal-body {
+            margin-bottom: 15px;
+        }
+
+        .modal-label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--vscode-foreground);
+            font-weight: 500;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-family: monospace;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 6px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .modal-btn-primary {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+        .modal-btn-primary:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .modal-btn-secondary {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .modal-btn-secondary:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        /* Base URL List styles */
+        .base-url-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .base-url-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background-color: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .base-url-item-input {
+            flex: 1;
+            font-family: monospace;
+            background-color: transparent;
+            color: var(--vscode-input-foreground);
+            border: 1px solid transparent;
+            padding: 6px 8px;
+            border-radius: 3px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .base-url-item-input:focus {
+            border-color: var(--vscode-focusBorder);
+            background-color: var(--vscode-input-background);
+        }
+
+        .base-url-item-input:hover {
+            border-color: var(--vscode-input-border);
+        }
+
+        .base-url-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .base-url-item-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 16px;
+            background-color: transparent;
+            color: var(--vscode-foreground);
+            transition: all 0.2s;
+        }
+
+        .base-url-item-btn:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .base-url-item-btn.delete:hover {
+            background-color: #f93e3e;
+            color: white;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn.cancel {
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+        }
+
+        .icon-btn.cancel:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .icon-btn.save {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+        }
+
+        .icon-btn.save:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
         /* Auth type selector styles */
         .auth-type-selector {
             display: flex;
@@ -567,33 +845,123 @@
 
             .url-section {
                 flex-wrap: wrap;
+                gap: 0;
             }
 
             .http-method {
                 min-width: 60px;
+                border-radius: 4px 0 0 0;
             }
 
             .url-inputs-container {
-                flex: 1 1 100%;
-                min-width: 100%;
+                flex: 1 1 auto;
+                min-width: 0;
             }
 
-            .base-url-input {
-                flex: 1 1 40%;
+            .base-url-select {
+                border-radius: 0;
             }
 
             .route-input {
-                flex: 1 1 60%;
+                flex: 1 1 auto;
+                border-radius: 0 4px 0 0;
             }
 
             .send-button {
-                flex: 1 1 100%;
+                flex: 1 1 50%;
+                border-radius: 0 0 0 4px;
+            }
+
+            .manage-baseurl-btn {
+                flex: 1 1 50%;
+                border-radius: 0 0 4px 0;
+            }
+        }
+
+        /* Toast notification styles */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: var(--vscode-notifications-background);
+            color: var(--vscode-notifications-foreground);
+            border: 1px solid var(--vscode-notifications-border);
+            border-radius: 4px;
+            padding: 12px 16px;
+            min-width: 250px;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast.success {
+            border-left: 3px solid #49cc90;
+        }
+
+        .toast.error {
+            border-left: 3px solid #f93e3e;
+        }
+
+        .toast.info {
+            border-left: 3px solid #4d94ff;
+        }
+
+        .toast-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .toast-message {
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .toast.fade-out {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(400px);
+                opacity: 0;
             }
         }
     </style>
 </head>
 
 <body>
+    <!-- Toast notification container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <div class="main-content">
             <div class="left-panel">
@@ -601,10 +969,15 @@
                     <div class="url-section">
                         <div class="http-method" id="httpMethod">GET</div>
                         <div class="url-inputs-container">
-                            <input type="text" class="base-url-input" id="baseUrlInput" placeholder="Base URL" />
+                            <div class="base-url-container">
+                                <select class="base-url-select" id="baseUrlSelect">
+                                    <option value="">Select Base URL</option>
+                                </select>
+                            </div>
                             <input type="text" class="route-input" id="routeInput" placeholder="/api/route" />
                         </div>
                         <button class="send-button" id="sendButton">Send</button>
+                        <button class="manage-baseurl-btn" id="manageBaseUrlBtn" title="Manage Base URLs">⚙️</button>
                     </div>
 
                     <div class="tabs">
@@ -703,15 +1076,36 @@
         </div>
     </div>
 
+    <!-- Base URL Management Modal -->
+    <div class="modal" id="manageBaseUrlModal">
+        <div class="modal-content" style="width: 600px; max-width: 95%;">
+            <div class="modal-body">
+                <div class="base-url-list" id="baseUrlListContainer">
+                    <!-- Base URL 列表将动态生成 -->
+                </div>
+                <button class="add-button" id="addNewBaseUrlBtn" style="width: 100%; margin-top: 10px;">+ Add Base
+                    URL</button>
+            </div>
+            <div class="modal-footer">
+                <button class="icon-btn cancel" id="cancelManageBtn" title="Cancel">✕</button>
+                <button class="icon-btn save" id="saveManageBtn" title="Save">✓</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // 获取 VS Code API
         const vscode = acquireVsCodeApi();
 
         // 全局变量存储当前 API 端点信息
         let currentApiEndpoint = null;
+        let savedBaseUrls = []; // 存储用户保存的 base URLs
+        let defaultBaseUrl = ''; // 默认的 base URL (来自 launchSettings.json)
+        let tempBaseUrls = []; // 临时编辑中的 base URLs
 
         // 通知扩展 WebView 已准备好
         vscode.postMessage({ type: 'webviewReady' });
+        // 注意：不再主动请求 baseUrls，后端会在初始化完成后主动发送
 
         // 响应体全选功能
         const responseBodyWrapper = document.getElementById('responseBodyWrapper');
@@ -738,6 +1132,185 @@
                     }
                 }
             });
+        }
+
+        // === Base URL Management ===
+
+        // Load and render base URLs in the select dropdown
+        function renderBaseUrls() {
+            const select = document.getElementById('baseUrlSelect');
+            select.innerHTML = '';
+
+            // 总是先添加默认URL（来自 launchSettings.json）并设置为第一个选项
+            if (defaultBaseUrl) {
+                const option = document.createElement('option');
+                option.value = defaultBaseUrl;
+                option.textContent = `${defaultBaseUrl}`;
+                option.dataset.isDefault = 'true';
+                select.appendChild(option);
+            }
+
+            // 然后添加用户保存的 base URLs
+            savedBaseUrls.forEach((url, index) => {
+                const option = document.createElement('option');
+                option.value = url;
+                option.textContent = url;
+                option.dataset.index = index;
+                select.appendChild(option);
+            });
+
+            // 默认选中第一个选项（launchSettings.json 的 URL）
+            if (select.options.length > 0) {
+                select.selectedIndex = 0;
+            }
+        }
+
+        // Render base URL list in management modal
+        function renderBaseUrlList() {
+            const container = document.getElementById('baseUrlListContainer');
+
+            if (tempBaseUrls.length === 0) {
+                container.innerHTML = '<p style="color: var(--vscode-descriptionForeground); text-align: center; padding: 20px;">No Base URLs yet. Click "+ Add New Base URL" to add one.</p>';
+                return;
+            }
+
+            container.innerHTML = tempBaseUrls.map((url, index) => `
+                <div class="base-url-item">
+                    <input type="text" class="base-url-item-input" value="${escapeHtml(url)}" data-index="${index}" placeholder="https://api.example.com" />
+                    <div class="base-url-item-actions">
+                        <button class="base-url-item-btn delete" data-index="${index}" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Event delegation for base URL list buttons
+        document.getElementById('baseUrlListContainer').addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('delete')) {
+                const index = parseInt(target.getAttribute('data-index'));
+                deleteBaseUrlDirect(index);
+            }
+        });
+
+        // Event delegation for input changes
+        document.getElementById('baseUrlListContainer').addEventListener('input', (e) => {
+            const target = e.target;
+            if (target.classList.contains('base-url-item-input')) {
+                const index = parseInt(target.getAttribute('data-index'));
+                tempBaseUrls[index] = target.value;
+            }
+        });
+
+        // Delete base URL directly (no confirmation)
+        function deleteBaseUrlDirect(index) {
+            if (index >= 0 && index < tempBaseUrls.length) {
+                tempBaseUrls.splice(index, 1);
+                renderBaseUrlList();
+            }
+        }
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Open management modal
+        document.getElementById('manageBaseUrlBtn').addEventListener('click', () => {
+            // Copy current saved URLs to temp for editing
+            tempBaseUrls = [...savedBaseUrls];
+            renderBaseUrlList();
+            document.getElementById('manageBaseUrlModal').classList.add('show');
+        });
+
+        // Cancel management modal (discard changes)
+        document.getElementById('cancelManageBtn').addEventListener('click', () => {
+            document.getElementById('manageBaseUrlModal').classList.remove('show');
+            tempBaseUrls = [];
+        });
+
+        // Save management modal (apply changes)
+        document.getElementById('saveManageBtn').addEventListener('click', () => {
+            // Filter out empty URLs and trim
+            savedBaseUrls = tempBaseUrls
+                .map(url => url.trim())
+                .filter(url => url.length > 0);
+
+            // Save to extension
+            vscode.postMessage({
+                type: 'saveBaseUrls',
+                data: savedBaseUrls
+            });
+
+            // Re-render select dropdown
+            renderBaseUrls();
+
+            // Close modal
+            document.getElementById('manageBaseUrlModal').classList.remove('show');
+            tempBaseUrls = [];
+
+            // Show success message
+            showToast('Base URLs saved successfully', 'success');
+        });
+
+        // Close management modal when clicking outside
+        document.getElementById('manageBaseUrlModal').addEventListener('click', (e) => {
+            if (e.target.id === 'manageBaseUrlModal') {
+                document.getElementById('manageBaseUrlModal').classList.remove('show');
+                tempBaseUrls = [];
+            }
+        });
+
+        // Add new base URL
+        document.getElementById('addNewBaseUrlBtn').addEventListener('click', () => {
+            tempBaseUrls.push(''); // Add empty string at the end
+            renderBaseUrlList();
+            // Focus on the last input
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('.base-url-item-input');
+                if (inputs.length > 0) {
+                    const lastInput = inputs[inputs.length - 1];
+                    lastInput.focus();
+                    lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 0);
+        });
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-message">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+
+
+        // Get current selected base URL
+        function getCurrentBaseUrl() {
+            const select = document.getElementById('baseUrlSelect');
+            return select.value || '';
         }
 
         // Tab switching
@@ -835,7 +1408,7 @@
             showLoading();
 
             const method = currentApiEndpoint.httpMethod;
-            const baseUrl = document.getElementById('baseUrlInput').value;
+            const baseUrl = getCurrentBaseUrl();
             const route = document.getElementById('routeInput').value;
             const url = baseUrl + route;
             const token = document.getElementById('tokenInput').value;
@@ -914,6 +1487,10 @@
                 case 'updateApiEndpoint':
                     updateApiEndpoint(message.data);
                     break;
+                case 'loadBaseUrls':
+                    savedBaseUrls = message.data || [];
+                    renderBaseUrls();
+                    break;
             }
         });
 
@@ -931,12 +1508,15 @@
             const urlMatch = fullUrl.match(/^(https?:\/\/[^\/]+)(.*)$/);
 
             if (urlMatch) {
-                document.getElementById('baseUrlInput').value = urlMatch[1];
+                defaultBaseUrl = urlMatch[1];
                 document.getElementById('routeInput').value = urlMatch[2] || '/';
             } else {
-                document.getElementById('baseUrlInput').value = '';
+                defaultBaseUrl = '';
                 document.getElementById('routeInput').value = fullUrl;
             }
+
+            // Render base URL dropdown
+            renderBaseUrls();
 
             // Query parameters list starts empty - users can add them manually
             document.getElementById('queryList').innerHTML = '';
@@ -979,13 +1559,13 @@
         // Show loading state
         function showLoading() {
             const statusValue = document.getElementById('statusValue');
-            statusValue.textContent = '正在发送中... / Sending request...';
+            statusValue.textContent = '正在发送中...';
             statusValue.className = 'status-value';
 
             document.getElementById('sizeValue').textContent = '-';
             document.getElementById('timeValue').textContent = '-';
 
-            document.getElementById('responseBody').innerHTML = '<span style="color: var(--vscode-descriptionForeground); font-style: italic;">正在发送请求，请稍候... / Sending request, please wait...</span>';
+            document.getElementById('responseBody').innerHTML = '<span style="color: var(--vscode-descriptionForeground); font-style: italic;">正在发送请求，请稍候...</span>';
             document.getElementById('lineNumbers').innerHTML = '<span class="line-number">1</span>';
 
             document.getElementById('headerCount').textContent = '0';

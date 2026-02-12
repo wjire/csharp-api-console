@@ -68,6 +68,20 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 - 无需手动输入 Base URL，开箱即用  
   No need to manually input Base URL, works out of the box
 
+### 🛠️ **Base URL 管理** | Base URL Management
+
+- 点击请求区域右侧的 **⚙️ 配置按钮**打开 Base URL 管理面板  
+  Click the **⚙️ Config button** on the right side of request area to open Base URL management panel
+
+- 支持添加、编辑、删除自定义 Base URL，方便在多个环境间切换  
+  Support adding, editing, and deleting custom Base URLs for easy environment switching
+
+- 所有自定义 Base URL 保存在项目的 `.vscode/csharp-api-console-config.json` 文件中  
+  All custom Base URLs are saved in `.vscode/csharp-api-console-config.json` in your project
+
+- 自动缓存配置，读写性能优化，支持多项目独立配置  
+  Auto-cached configuration with optimized read/write performance, supports independent config per project
+
 ## 🧪 使用方法 | Usage
 
 ### 快速开始 | Quick Start
@@ -142,6 +156,64 @@ Search for `C# API Console` in VS Code settings:
 - **说明 | Description**:  
   控制器无 `[ApiVersion]` 特性时的默认版本。留空则不替换占位符。  
   Default API version when controller has no `[ApiVersion]` attribute. Leave empty to keep placeholder.
+
+---
+
+## 💡 Base URL 管理说明 | Base URL Management Guide
+
+### 如何管理 Base URL | How to Manage Base URLs
+
+1. **打开管理面板**  
+   点击测试面板中请求区域右侧的 **⚙️ 配置按钮**  
+   Click the **⚙️ Config button** on the right side of the request area in the test panel
+
+2. **添加新 Base URL**  
+   点击 **"+ Add New Base URL"** 按钮，输入完整的 URL（如 `https://api.example.com`）  
+   Click **"+ Add New Base URL"** button and enter the complete URL (e.g., `https://api.example.com`)
+
+3. **编辑 Base URL**  
+   直接在输入框中修改 URL 内容  
+   Edit the URL directly in the input field
+
+4. **删除 Base URL**  
+   点击 URL 旁边的 **🗑️ 删除按钮**  
+   Click the **🗑️ Delete button** next to the URL
+
+5. **保存更改**  
+   点击 **✓ 保存按钮**保存所有更改  
+   Click the **✓ Save button** to save all changes
+
+### 配置文件位置 | Configuration File Location
+
+所有自定义的 Base URL 存储在：  
+All custom Base URLs are stored in:
+
+```
+<项目根目录>/.vscode/csharp-api-console-config.json
+<Project Root>/.vscode/csharp-api-console-config.json
+```
+
+**示例文件内容 | Example file content**:
+
+```json
+{
+  "baseUrls": {
+    "E:\\MyProject\\MyApi.csproj": [
+      "https://api-dev.example.com",
+      "https://api-staging.example.com",
+      "https://api-prod.example.com"
+    ]
+  }
+}
+```
+
+**提示 | Tips**:
+- 可以直接编辑此文件来批量管理 Base URL  
+  You can edit this file directly to manage Base URLs in batch
+- 建议将此文件加入 `.gitignore`，避免将私人配置提交到版本控制  
+  Consider adding this file to `.gitignore` to avoid committing personal configs
+- 每个项目都有独立的配置，互不影响  
+  Each project has its own independent configuration
 
 ---
 

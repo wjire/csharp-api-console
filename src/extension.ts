@@ -3,6 +3,10 @@ import { ApiEndpointAnalyzer } from './apiEndpointAnalyzer';
 import { CodeLensProvider } from './codeLensProvider';
 import { ApiConsolePanel } from './apiConsolePanel';
 import { ProjectConfigCache } from './projectConfigCache';
+import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
+
+// 全局配置管理器
+let baseUrlConfigManager: BaseUrlConfigManager;
 
 /**
  * 插件激活入口
@@ -14,6 +18,12 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('请先打开一个工作区');
         return;
     }
+
+    // 0. 初始化 Base URL 配置管理器（插件启动时加载配置）
+    baseUrlConfigManager = new BaseUrlConfigManager(workspaceRoot);
+    context.subscriptions.push({
+        dispose: () => baseUrlConfigManager.dispose()
+    });
 
     // 1. 创建项目配置缓存
     const projectConfigCache = new ProjectConfigCache();
@@ -40,7 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
     // 3. 注册 API 测试命令
     context.subscriptions.push(
         vscode.commands.registerCommand('csharpApiConsole.testEndpoint', (apiInfo) => {
-            ApiConsolePanel.createOrShow(context.extensionUri, apiInfo, projectConfigCache);
+            ApiConsolePanel.createOrShow(context.extensionUri, apiInfo, projectConfigCache, baseUrlConfigManager, context);
         })
     );
 

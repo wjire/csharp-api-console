@@ -7,12 +7,23 @@ All notable changes to this project will be documented in this file.
 
 ## [1.0.2] - 2026-02-12
 
+### ✨ 新功能 | New Features
+
+- **Base URL 管理**：新增 Base URL 管理功能，支持添加、编辑、删除自定义 Base URL
+- **Base URL Management**: Added Base URL management feature with support for adding, editing, and deleting custom Base URLs
+- **环境切换**：可以快速在开发、测试、生产等多个环境之间切换
+- **Environment Switching**: Quick switching between development, staging, production and other environments
+- **配置持久化**：Base URL 配置保存在 `.vscode/csharp-api-console-config.json` 文件中，每个项目独立配置
+- **Persistent Configuration**: Base URL configs are saved in `.vscode/csharp-api-console-config.json`, independent per project
+
 ### 🎨 界面优化 | UI Improvements
 
 - **请求状态反馈**：点击 Send 按钮后自动置灰，防止重复提交
 - **Request status feedback**: Send button is automatically disabled after clicking to prevent duplicate submissions
 - **加载状态提示**：发送请求时显示"正在发送中..."提示，响应完成后恢复
 - **Loading state indicator**: Display "Sending..." message while request is in progress, restore after completion
+- **紧凑布局**：优化按钮和输入框布局，所有元素高度统一，无缝连接
+- **Compact Layout**: Optimized button and input layout, all elements unified in height with seamless connection
 
 ---
 

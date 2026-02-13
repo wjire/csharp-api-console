@@ -30,6 +30,9 @@ export class LaunchSettingsReader {
                 content = content.slice(1);
             }
 
+            // 移除单行注释（以 // 开头的行）
+            content = this.removeComments(content);
+
             // 解析 JSON
             const json = JSON.parse(content);
             const profiles = json.profiles ?? {};
@@ -90,6 +93,20 @@ export class LaunchSettingsReader {
             console.error('读取 launchSettings.json 失败:', error);
             return null;
         }
+    }
+
+    /**
+     * 移除 JSON 文件中的单行注释（以 // 开头的行）
+     */
+    private static removeComments(content: string): string {
+        return content
+            .split('\n')
+            .filter(line => {
+                const trimmed = line.trim();
+                // 保留非注释行
+                return !trimmed.startsWith('//');
+            })
+            .join('\n');
     }
 
     /**

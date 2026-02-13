@@ -5,6 +5,7 @@ import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
 import { HttpClient } from './services/httpClient';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
+import { lang } from './languageManager';
 
 /**
  * API 控制台面板
@@ -110,6 +111,12 @@ export class ApiConsolePanel {
                         data: this.pendingApiEndpoint
                     });
 
+                    // 发送语言文本
+                    this.panel.webview.postMessage({
+                        type: 'i18n',
+                        data: lang.getWebViewTexts()
+                    });
+
                     // 主动发送 Base URLs（确保 currentProjectPath 已设置）
                     await this.loadBaseUrls();
 
@@ -170,10 +177,18 @@ export class ApiConsolePanel {
      */
     private getStaticHtml(): string {
         const htmlPath = vscode.Uri.joinPath(this.extensionUri, 'webview', 'api-console.html');
+        const styleUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'webview', 'api-console.css')
+        );
+        const scriptUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionUri, 'webview', 'api-console.js')
+        );
 
         try {
             const htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
-            return htmlContent;
+            return htmlContent
+                .replace('{{STYLE_URI}}', styleUri.toString())
+                .replace('{{SCRIPT_URI}}', scriptUri.toString());
         } catch (error) {
             console.error('Failed to load static HTML:', error);
             return `<!DOCTYPE html>
@@ -222,6 +237,11 @@ export class ApiConsolePanel {
      */
     public dispose() {
         ApiConsolePanel.currentPanel = undefined;
+
+        // 清理 HttpClient 资源（如果有的话）
+        if (this.httpClient && typeof (this.httpClient as any).dispose === 'function') {
+            (this.httpClient as any).dispose();
+        }
 
         this.panel.dispose();
 

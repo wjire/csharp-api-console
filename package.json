@@ -56,7 +56,8 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "onLanguage:csharp"
+        "onLanguage:csharp",
+        "onCommand:csharpApiConsole.testEndpoint"
     ],
     "main": "./out/extension.js",
     "contributes": {

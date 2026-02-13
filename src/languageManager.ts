@@ -22,6 +22,52 @@ const TEXT_MAP = {
         'error.noProjectFile': '无法找到项目文件',
         'error.cannotOpenFile': '无法打开文件',
 
+        // WebView - 按钮和标签
+        'webview.send': '发送',
+        'webview.add': '添加',
+        'webview.cancel': '取消',
+        'webview.save': '保存',
+        'webview.delete': '删除',
+        'webview.remove': '移除',
+
+        // WebView - 标签页
+        'webview.tab.headers': 'Headers',
+        'webview.tab.auth': 'Auth',
+        'webview.tab.query': 'Query',
+        'webview.tab.body': 'Body',
+        'webview.tab.response': 'Response',
+
+        // WebView - 输入框
+        'webview.placeholder.baseUrl': '选择 Base URL',
+        'webview.placeholder.route': '/api/route',
+        'webview.placeholder.token': 'token（Bearer 前缀可选）',
+        'webview.placeholder.body': '在此输入 JSON body...',
+        'webview.placeholder.key': 'Key',
+        'webview.placeholder.value': 'Value',
+        'webview.placeholder.parameter': 'parameter',
+        'webview.placeholder.baseUrlInput': 'https://api.example.com',
+
+        // WebView - 状态栏
+        'webview.status.label': '状态:',
+        'webview.size.label': '大小:',
+        'webview.time.label': '耗时:',
+        'webview.status.sending': '正在发送...',
+
+        // WebView - Base URL 管理
+        'webview.baseUrl.manage': '管理 Base URLs',
+        'webview.baseUrl.add': '+ 添加 Base URL',
+        'webview.baseUrl.empty': '暂无 Base URL，点击"+ 添加 Base URL"添加一个',
+        'webview.baseUrl.saved': 'Base URLs 已保存',
+
+        // WebView - Auth
+        'webview.auth.bearer': 'Bearer',
+        'webview.auth.basic': 'Basic',
+        'webview.auth.oauth2': 'OAuth 2',
+
+        // WebView - 错误信息
+        'webview.error.requestFailed': '请求失败',
+        'webview.error.invalidJson': 'JSON 格式错误',
+        'webview.error.networkError': '网络错误',
     },
     'en': {
         // Common
@@ -31,6 +77,52 @@ const TEXT_MAP = {
         'error.noProjectFile': 'Cannot find project file',
         'error.cannotOpenFile': 'Cannot open file',
 
+        // WebView - Buttons and Labels
+        'webview.send': 'Send',
+        'webview.add': 'Add',
+        'webview.cancel': 'Cancel',
+        'webview.save': 'Save',
+        'webview.delete': 'Delete',
+        'webview.remove': 'Remove',
+
+        // WebView - Tabs
+        'webview.tab.headers': 'Headers',
+        'webview.tab.auth': 'Auth',
+        'webview.tab.query': 'Query',
+        'webview.tab.body': 'Body',
+        'webview.tab.response': 'Response',
+
+        // WebView - Placeholders
+        'webview.placeholder.baseUrl': 'Select Base URL',
+        'webview.placeholder.route': '/api/route',
+        'webview.placeholder.token': 'token (Bearer prefix optional)',
+        'webview.placeholder.body': 'Enter JSON body here...',
+        'webview.placeholder.key': 'Key',
+        'webview.placeholder.value': 'Value',
+        'webview.placeholder.parameter': 'parameter',
+        'webview.placeholder.baseUrlInput': 'https://api.example.com',
+
+        // WebView - Status Bar
+        'webview.status.label': 'Status:',
+        'webview.size.label': 'Size:',
+        'webview.time.label': 'Time:',
+        'webview.status.sending': 'Sending...',
+
+        // WebView - Base URL Management
+        'webview.baseUrl.manage': 'Manage Base URLs',
+        'webview.baseUrl.add': '+ Add Base URL',
+        'webview.baseUrl.empty': 'No Base URLs yet. Click "+ Add Base URL" to add one.',
+        'webview.baseUrl.saved': 'Base URLs saved',
+
+        // WebView - Auth
+        'webview.auth.bearer': 'Bearer',
+        'webview.auth.basic': 'Basic',
+        'webview.auth.oauth2': 'OAuth 2',
+
+        // WebView - Error Messages
+        'webview.error.requestFailed': 'Request failed',
+        'webview.error.invalidJson': 'Invalid JSON format',
+        'webview.error.networkError': 'Network error',
     }
 };
 
@@ -88,6 +180,25 @@ export class LanguageManager {
      */
     public t(key: TextKey, ...args: any[]): string {
         return this.getText(key, ...args);
+    }
+
+    /**
+     * 获取所有 webview 相关的文本（用于传递给前端）
+     */
+    public getWebViewTexts(): Record<string, string> {
+        const texts: Record<string, string> = {};
+        const allKeys = Object.keys(TEXT_MAP[this.currentLanguage]) as TextKey[];
+
+        // 只提取 webview 相关的文本
+        allKeys.forEach(key => {
+            if (key.startsWith('webview.')) {
+                // 移除 webview. 前缀作为键
+                const shortKey = key.replace('webview.', '');
+                texts[shortKey] = TEXT_MAP[this.currentLanguage][key];
+            }
+        });
+
+        return texts;
     }
 }
 

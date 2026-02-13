@@ -207,6 +207,20 @@ All custom Base URLs are stored in:
 }
 ```
 
+---
+
+## 🚀 路线图 | Roadmap
+
+### 计划中的功能 | Planned Features
+
+- [ ] **参数 Mock**：支持为 Query、Body 等参数配置 Mock 数据，快速生成测试场景
+- [ ] **Parameters Mock**: Support configuring mock data for Query, Body parameters to quickly generate test scenarios
+
+- [ ] **请求历史记录**：保存最近的请求历史，方便快速重复测试
+- [ ] **Request History**: Save recent request history for quick repeated testing
+
+---
+
 ## 📦 安装 | Installation
 
 1. 打开 VS Code 扩展面板 (`Ctrl+Shift+X` / `Cmd+Shift+X`)  

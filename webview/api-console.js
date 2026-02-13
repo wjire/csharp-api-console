@@ -353,15 +353,28 @@
         }
 
         // Collect query parameters and append to URL
+        // Priority: query string input > manual parameter list
         const queryParams = [];
-        document.querySelectorAll('#queryList .param-row').forEach(row => {
-            const inputs = row.querySelectorAll('.param-input');
-            const key = inputs[0].value.trim();
-            const value = inputs[1].value.trim();
-            if (key) {
+        const queryStringInput = document.getElementById('queryStringInput').value.trim();
+
+        if (queryStringInput) {
+            // Use query string input (priority)
+            const cleanString = queryStringInput.startsWith('?') ? queryStringInput.substring(1) : queryStringInput;
+            const params = new URLSearchParams(cleanString);
+            params.forEach((value, key) => {
                 queryParams.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
-            }
-        });
+            });
+        } else {
+            // Use manual parameter list (fallback)
+            document.querySelectorAll('#queryList .param-row').forEach(row => {
+                const inputs = row.querySelectorAll('.param-input');
+                const key = inputs[0].value.trim();
+                const value = inputs[1].value.trim();
+                if (key) {
+                    queryParams.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                }
+            });
+        }
 
         let finalUrl = url;
         if (queryParams.length > 0) {
@@ -426,6 +439,7 @@
         document.getElementById('routeInput').placeholder = t('placeholder.route');
         document.getElementById('tokenInput').placeholder = t('placeholder.token');
         document.getElementById('bodyEditor').placeholder = t('placeholder.body');
+        document.getElementById('queryStringInput').placeholder = t('placeholder.queryString');
 
         // Update manage button title
         document.getElementById('manageBaseUrlBtn').title = t('baseUrl.manage');

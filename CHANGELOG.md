@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.5] - 2026-02-13
+
+### ✨ 新功能 | New Features
+
+- **Query 参数快速输入**：Query 标签新增文本输入框，支持直接粘贴查询字符串（如 `?id=1&name=dankit`）。输入框参数与手动添加的参数列表互不干扰，发送请求时优先使用输入框参数
+- **Quick Query Input**: Added text input in Query tab to paste query strings (e.g., `?id=1&name=dankit`). Input field and manual parameter list are independent, with input field taking priority when sending requests
+
 ## [1.0.4] - 2026-02-13
 
 ### ⚡ 性能优化 | Performance Improvements

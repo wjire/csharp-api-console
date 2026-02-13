@@ -46,6 +46,7 @@ const TEXT_MAP = {
         'webview.placeholder.value': 'Value',
         'webview.placeholder.parameter': 'parameter',
         'webview.placeholder.baseUrlInput': 'https://api.example.com',
+        'webview.placeholder.queryString': '粘贴查询字符串（如 ?id=1&name=dankit，? 可选）。优先使用这里的参数，如果为空则使用下面添加的参数',
 
         // WebView - 状态栏
         'webview.status.label': '状态:',
@@ -101,6 +102,7 @@ const TEXT_MAP = {
         'webview.placeholder.value': 'Value',
         'webview.placeholder.parameter': 'parameter',
         'webview.placeholder.baseUrlInput': 'https://api.example.com',
+        'webview.placeholder.queryString': 'Paste query string (e.g., ?id=1&name=dankit, ? optional). Parameters here take priority, fallback to manual list if empty',
 
         // WebView - Status Bar
         'webview.status.label': 'Status:',

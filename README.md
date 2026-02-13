@@ -123,10 +123,6 @@ public class UsersController : ControllerBase
 [HttpGet("query")]
 public IActionResult Query() { }
 
-// ✅ 路由参数 | Route parameters
-[HttpGet("{id}")]
-public IActionResult GetById(int id) { }
-
 // ✅ [action] 占位符 | [action] placeholder
 [Route("api/[controller]/[action]")]
 public class TestController : ControllerBase
@@ -210,16 +206,6 @@ All custom Base URLs are stored in:
   }
 }
 ```
-
-**提示 | Tips**:
-- 可以直接编辑此文件来批量管理 Base URL  
-  You can edit this file directly to manage Base URLs in batch
-- 建议将此文件加入 `.gitignore`，避免将私人配置提交到版本控制  
-  Consider adding this file to `.gitignore` to avoid committing personal configs
-- 每个项目都有独立的配置，互不影响  
-  Each project has its own independent configuration
-
----
 
 ## 📦 安装 | Installation
 

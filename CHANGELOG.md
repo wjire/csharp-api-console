@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.3] - 2026-02-13
+
+### 🎨 界面优化 | UI Improvements
+
+- **布局重构**：顶部集中显示请求控件（HTTP 方法 + Base URL + Route + 操作按钮），下方左右分栏（请求参数 / 响应区域）
+- **Layout Refactoring**: Top bar with request controls (HTTP method + Base URL + Route + action buttons), bottom split view (request params / response area)
+
+### 🔧 功能改进 | Feature Improvements
+
+- **launchSettings.json 注释支持**：自动过滤 `//` 开头的注释行，避免 JSON 解析错误
+- **launchSettings.json Comment Support**: Automatically filter comment lines starting with `//` to prevent JSON parsing errors
+
+- **模态框交互优化**：Base URL 管理模态框只能通过按钮关闭，避免误操作导致未保存内容丢失
+- **Modal Interaction Optimization**: Base URL management modal can only be closed via buttons to prevent accidental loss of unsaved changes
+
+### ⚡ 性能优化 | Performance Improvements
+
+- **资源清理改进**：优化 HttpClient 资源释放逻辑，确保面板关闭时正确清理
+- **Resource Cleanup Improvement**: Optimized HttpClient resource disposal logic to ensure proper cleanup when panel is closed
+
+---
+
 ## [1.0.2] - 2026-02-12
 
 ### ✨ 新功能 | New Features

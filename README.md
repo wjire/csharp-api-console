@@ -21,13 +21,13 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 
 ## 📷 预览 | Preview
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/blob/master/resources/resources/codeLens.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/codeLens.png)
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/blob/master/resources/consolePanel.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/consolePanel.png)
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/blob/master/resources/baseUrlSelect.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlSelect.png)
 
-![功能截图](https://gitee.com/dankit/csharp-api-console/blob/master/resources/baseUrlManage.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlManage.png)
 
 ---
 

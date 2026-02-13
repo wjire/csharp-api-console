@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.4] - 2026-02-13
+
+### ⚡ 性能优化 | Performance Improvements
+
+- **CodeLens 位置优化**：确保 API 测试 CodeLens 始终显示在官方"引用" CodeLens 右侧，避免位置错乱
+- **CodeLens Position Optimization**: Ensure API testing CodeLens always appears to the right of the official "References" CodeLens to avoid display order issues
+
+---
+
 ## [1.0.3] - 2026-02-13
 
 ### 🎨 界面优化 | UI Improvements

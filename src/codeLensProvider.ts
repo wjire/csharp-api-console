@@ -9,9 +9,6 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
     private analyzer: ApiEndpointAnalyzer;
     private cache: CodeLensCache;
 
-    // 正则表达式缓存，避免每次调用都重新编译
-    private readonly methodNameRegex = /\s+(\w+)\s*\(/;
-
     constructor(analyzer: ApiEndpointAnalyzer) {
         this.analyzer = analyzer;
         this.cache = new CodeLensCache();
@@ -92,9 +89,10 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
             }
 
             // 创建 CodeLens 并立即设置命令
-            // ⚡ 定位到方法名位置（而不是行首），确保显示在"引用"右侧
-            const methodNameColumn = this.findMethodNameColumn(line);
-            const range = new vscode.Range(i, methodNameColumn, i, methodNameColumn);
+            // ⚡ 使用一个较大的列位置，确保显示在"引用" CodeLens 右侧
+            // VS Code 的 CodeLens 排序基于 Range 的列位置，列位置越大越靠右
+            const largeColumn = 9999;
+            const range = new vscode.Range(i, largeColumn, i, largeColumn);
 
             // ⚡ 显示完整路由信息（不含 baseUrl）
             const title = `⚡ ${apiEndpoint.httpMethod} ${apiEndpoint.routeTemplate}`;
@@ -109,22 +107,6 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
         }
 
         return codeLenses;
-    }
-
-    /**
-     * 查找方法名在行中的列位置
-     * 性能优化：使用缓存的正则表达式，避免重复编译
-     */
-    private findMethodNameColumn(line: string): number {
-        // 匹配方法名：public async Task<IActionResult> GetUsers(...)
-        // 查找最后一个标识符在左括号前的位置
-        const match = line.match(this.methodNameRegex);
-        if (match && match.index !== undefined) {
-            // 返回方法名开始的位置
-            return match.index + match[0].indexOf(match[1]);
-        }
-        // 如果无法匹配，回退到行首
-        return 0;
     }
 
     /**

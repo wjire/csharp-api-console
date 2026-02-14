@@ -54,11 +54,24 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // 4. 初始化 API 测试相关组件
+    // 4. 全局监听调试会话生命周期（面板关闭后仍可维护状态）
+    context.subscriptions.push(
+        vscode.debug.onDidStartDebugSession(session => {
+            ApiConsolePanel.onDebugSessionStarted(session);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.debug.onDidTerminateDebugSession(session => {
+            ApiConsolePanel.onDebugSessionTerminated(session);
+        })
+    );
+
+    // 5. 初始化 API 测试相关组件
     const apiAnalyzer = new ApiEndpointAnalyzer();
     const codeLensProvider = new CodeLensProvider(apiAnalyzer);
 
-    // 5. 注册 CodeLens Provider
+    // 6. 注册 CodeLens Provider
     context.subscriptions.push(
         vscode.languages.registerCodeLensProvider('csharp', codeLensProvider)
     );

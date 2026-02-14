@@ -17,6 +17,7 @@
     let tempBaseUrls = []; // 临时编辑中的 base URLs
     let currentBodyMode = 'json';
     let baseUrlMeasureCanvas = null;
+    let currentDebugState = 'idle';
 
     // 通知扩展 WebView 已准备好
     vscode.postMessage({ type: 'webviewReady' });
@@ -337,12 +338,43 @@
         binaryFileName.textContent = selectedFile?.name || t('bodyMode.noFile');
     }
 
+    function updateDebugButton() {
+        const debugButton = document.getElementById('debugButton');
+        if (!debugButton) {
+            return;
+        }
+
+        if (currentDebugState === 'starting') {
+            debugButton.textContent = t('debug.starting') || 'Starting...';
+            debugButton.disabled = true;
+            return;
+        }
+
+        if (currentDebugState === 'running') {
+            debugButton.textContent = t('debug.running') || 'Debug Running';
+            debugButton.disabled = true;
+            return;
+        }
+
+        debugButton.textContent = t('debug.start') || 'Start Debug';
+        debugButton.disabled = false;
+    }
+
     document.getElementById('binaryFileSelectBtn')?.addEventListener('click', () => {
         document.getElementById('binaryFileInput')?.click();
     });
 
     document.getElementById('binaryFileInput')?.addEventListener('change', () => {
         updateBinaryFileNameDisplay();
+    });
+
+    document.getElementById('debugButton')?.addEventListener('click', () => {
+        currentDebugState = 'starting';
+        updateDebugButton();
+
+        vscode.postMessage({
+            type: 'startDebug'
+        });
     });
 
     // Auth type switching
@@ -522,6 +554,7 @@
     // Update UI texts when language changes
     function updateUITexts() {
         // Update button texts
+        updateDebugButton();
         document.getElementById('sendButton').textContent = t('send');
         document.getElementById('addHeaderBtn').textContent = t('add');
         document.getElementById('addQueryBtn').textContent = t('add');
@@ -605,12 +638,27 @@
                 savedBaseUrls = message.data || [];
                 renderBaseUrls();
                 break;
+            case 'debugStatus': {
+                const debugStatus = message.data?.status;
+                if (debugStatus === 'idle' || debugStatus === 'starting' || debugStatus === 'running' || debugStatus === 'error') {
+                    currentDebugState = debugStatus === 'error' ? 'idle' : debugStatus;
+                    updateDebugButton();
+                }
+
+                if (message.data?.message) {
+                    const toastType = debugStatus === 'error' ? 'error' : (debugStatus === 'running' ? 'success' : 'info');
+                    showToast(message.data.message, toastType);
+                }
+                break;
+            }
         }
     });
 
     // Initialize with API endpoint data
     function initializeWithApiEndpoint(apiEndpoint) {
         currentApiEndpoint = apiEndpoint;
+        currentDebugState = 'idle';
+        updateDebugButton();
 
         // Update HTTP method and URL
         const methodElement = document.getElementById('httpMethod');

@@ -6,6 +6,7 @@ import { ProjectConfigCache } from './projectConfigCache';
 import { HttpClient } from './services/httpClient';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
 import { lang } from './languageManager';
+import { LaunchSettingsReader } from './launchSettingsReader';
 
 /**
  * API 控制台面板
@@ -22,6 +23,41 @@ export class ApiConsolePanel {
     private readonly baseUrlConfigManager: BaseUrlConfigManager;
     private readonly context: vscode.ExtensionContext;
     private currentProjectPath: string = '';
+    private static readonly DEBUG_SESSION_PREFIX = 'C# API Console';
+    private static readonly runningProjectPaths = new Set<string>();
+    private static readonly openPanels = new Set<ApiConsolePanel>();
+
+    public static onDebugSessionStarted(session: vscode.DebugSession): void {
+        const config = session.configuration as { projectPath?: string };
+        if (!config.projectPath) {
+            return;
+        }
+
+        const normalizedProjectPath = ApiConsolePanel.normalizeProjectPath(config.projectPath);
+        ApiConsolePanel.runningProjectPaths.add(normalizedProjectPath);
+
+        for (const panel of ApiConsolePanel.openPanels) {
+            if (panel.matchesProjectPath(config.projectPath)) {
+                panel.postDebugStatus('running');
+            }
+        }
+    }
+
+    public static onDebugSessionTerminated(session: vscode.DebugSession): void {
+        const config = session.configuration as { projectPath?: string };
+        if (!config.projectPath) {
+            return;
+        }
+
+        const normalizedProjectPath = ApiConsolePanel.normalizeProjectPath(config.projectPath);
+        ApiConsolePanel.runningProjectPaths.delete(normalizedProjectPath);
+
+        for (const panel of ApiConsolePanel.openPanels) {
+            if (panel.matchesProjectPath(config.projectPath)) {
+                panel.postDebugStatus('idle');
+            }
+        }
+    }
 
     /**
      * 创建或显示测试面板
@@ -75,6 +111,7 @@ export class ApiConsolePanel {
         this.httpClient = new HttpClient();
         this.baseUrlConfigManager = baseUrlConfigManager;
         this.context = context;
+        ApiConsolePanel.openPanels.add(this);
 
         // 加载静态 HTML 内容
         this.panel.webview.html = this.getStaticHtml();
@@ -120,6 +157,9 @@ export class ApiConsolePanel {
                     // 主动发送 Base URLs（确保 currentProjectPath 已设置）
                     await this.loadBaseUrls();
 
+                    // 同步当前项目调试状态
+                    this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
+
                     this.pendingApiEndpoint = null;
                 }
                 break;
@@ -132,7 +172,133 @@ export class ApiConsolePanel {
             case 'saveBaseUrls':
                 await this.saveBaseUrls(message.data);
                 break;
+            case 'startDebug':
+                await this.startDebugSession();
+                break;
         }
+    }
+
+    /**
+     * 启动调试会话（携带 launchSettings.json 环境变量）
+     */
+    private async startDebugSession(): Promise<void> {
+        if (!this.currentProjectPath) {
+            this.postDebugStatus('error', lang.t('webview.debug.noProject'));
+            return;
+        }
+
+        if (this.isCurrentProjectDebugRunning()) {
+            this.postDebugStatus('running', lang.t('webview.debug.alreadyRunning'));
+            return;
+        }
+
+        this.postDebugStatus('starting');
+
+        const env = LaunchSettingsReader.getEnvironmentVariables(this.currentProjectPath);
+        const workspaceFolder = this.getWorkspaceFolderForCurrentProject();
+        const normalizedProjectPath = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+        const projectName = this.getProjectNameFromPath(this.currentProjectPath);
+        const debugName = projectName
+            ? `${projectName} Debug`
+            : `${ApiConsolePanel.DEBUG_SESSION_PREFIX} Debug`;
+
+        const debugConfiguration: vscode.DebugConfiguration = {
+            name: debugName,
+            type: 'dotnet',
+            request: 'launch',
+            projectPath: this.currentProjectPath,
+            env
+        };
+
+        try {
+            const started = await vscode.debug.startDebugging(workspaceFolder, debugConfiguration);
+
+            if (!started) {
+                this.postDebugStatus('error', lang.t('webview.debug.failed'));
+                return;
+            }
+
+            ApiConsolePanel.runningProjectPaths.add(normalizedProjectPath);
+
+            this.postDebugStatus('running', lang.t('webview.debug.started'));
+        } catch (error) {
+            const message = error instanceof Error && error.message
+                ? `${lang.t('webview.debug.failed')}: ${error.message}`
+                : lang.t('webview.debug.failed');
+
+            this.postDebugStatus('error', message);
+        }
+    }
+
+    /**
+     * 回传调试状态到 WebView
+     */
+    private postDebugStatus(status: 'idle' | 'starting' | 'running' | 'error', message?: string): void {
+        this.panel.webview.postMessage({
+            type: 'debugStatus',
+            data: {
+                status,
+                message
+            }
+        });
+    }
+
+    /**
+     * 获取当前项目对应的工作区文件夹
+     */
+    private getWorkspaceFolderForCurrentProject(): vscode.WorkspaceFolder | undefined {
+        if (!this.currentProjectPath) {
+            return vscode.workspace.workspaceFolders?.[0];
+        }
+
+        return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(this.currentProjectPath))
+            ?? vscode.workspace.workspaceFolders?.[0];
+    }
+
+    /**
+     * 判断调试会话是否属于当前面板对应项目
+     */
+    private isCurrentProjectDebugSession(session: vscode.DebugSession): boolean {
+        const config = session.configuration as { name?: string; projectPath?: string };
+        if (!config.projectPath || !this.currentProjectPath) {
+            return false;
+        }
+
+        return ApiConsolePanel.normalizeProjectPath(config.projectPath) === ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+    }
+
+    /**
+     * 判断当前项目是否已在运行调试会话
+     */
+    private isCurrentProjectDebugRunning(): boolean {
+        if (!this.currentProjectPath) {
+            return false;
+        }
+
+        return ApiConsolePanel.runningProjectPaths.has(ApiConsolePanel.normalizeProjectPath(this.currentProjectPath));
+    }
+
+    /**
+     * 规范化项目路径（Windows 下统一小写以避免大小写差异）
+     */
+    private static normalizeProjectPath(projectPath: string): string {
+        return path.normalize(projectPath).toLowerCase();
+    }
+
+    private matchesProjectPath(projectPath: string): boolean {
+        if (!this.currentProjectPath) {
+            return false;
+        }
+
+        return ApiConsolePanel.normalizeProjectPath(projectPath) === ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+    }
+
+    /**
+     * 从 .csproj 路径提取项目名
+     */
+    private getProjectNameFromPath(projectPath: string): string {
+        const ext = path.extname(projectPath);
+        return path.basename(projectPath, ext).trim();
     }
 
     /**
@@ -241,6 +407,7 @@ export class ApiConsolePanel {
      */
     public dispose() {
         ApiConsolePanel.currentPanel = undefined;
+        ApiConsolePanel.openPanels.delete(this);
 
         // 清理 HttpClient 资源（如果有的话）
         if (this.httpClient && typeof (this.httpClient as any).dispose === 'function') {

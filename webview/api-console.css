@@ -224,6 +224,34 @@ body {
     flex-shrink: 0;
 }
 
+.debug-button {
+    padding: 10px 16px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-input-border);
+    border-right: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-weight: 600;
+    line-height: 1.5;
+    height: 42px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 96px;
+}
+
+.debug-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.debug-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .send-button:hover {
     background-color: #3eb878;
     border-color: #3eb878;

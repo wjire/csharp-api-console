@@ -1,10 +1,10 @@
 # C# API Console
 
-> ⚡ **轻量、直观的 ASP.NET Core API 调试工具**  
-> A lightweight and intuitive API debugging console for C# developers
+> ⚡ **轻量、直观的 ASP.NET Core API 测试与一键调试工具**  
+> A lightweight and intuitive ASP.NET Core API testing and one-click debugging tool
 
-在代码中一键测试 API 端点，无需离开编辑器，无需切换工具！  
-Test API endpoints with one click directly in your code editor - no tool switching needed!
+在代码中一键测试 API 端点并快速启动调试，无需离开编辑器，无需切换工具！  
+Test API endpoints and start debugging with one click directly in your code editor - no tool switching needed!
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
@@ -59,6 +59,20 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 
 - 支持 `[ApiVersion]` 特性和自定义默认版本  
   Support `[ApiVersion]` attribute with configurable default version
+
+### 🐞 **一键启动调试** | One-click Debug Start
+
+- 在请求栏中提供 **启动调试** 按钮（位于 Send 左侧），可在发送 API 请求前快速启动当前项目调试  
+  A **Start Debug** button is available in the request bar (left of Send) to quickly start debugging before sending API requests
+
+- 启动调试时自动遵循项目 `launchSettings.json` 配置（包括环境变量）  
+  Debug start follows project `launchSettings.json` configuration (including environment variables)
+
+- 支持多项目并行调试：仅阻止同项目重复启动，不影响其他项目调试  
+  Supports multi-project concurrent debugging: only blocks duplicate starts for the same project
+
+- 调试状态自动同步：通过工具栏停止、命令面板停止或 `Shift+F5` 结束会话后，按钮状态会自动恢复  
+  Debug status syncs automatically: when a session ends via toolbar stop, command palette stop, or `Shift+F5`, button state resets automatically
 
 ### 🔗 **自动配置 Base URL** | Auto Base URL Configuration
 
@@ -122,8 +136,13 @@ Test API endpoints with one click directly in your code editor - no tool switchi
    - **Query**: 设置查询参数 | Set query parameters
   - **Body**: 选择 JSON 或 Binary；Binary 默认 multipart/form-data（415 自动回退 raw binary） | Choose JSON or Binary; Binary uses multipart/form-data first (auto fallback to raw binary on 415)
 
-5. **发送请求并查看响应**  
-   Click "Send" and view the response
+5. **（可选）先启动调试**  
+  点击 **启动调试** 按钮，启动当前项目调试（会自动携带 launchSettings 环境变量）  
+  **(Optional) Start debugging first**  
+  Click **Start Debug** to launch debugging for the current project (with launchSettings environment variables)
+
+6. **发送请求并查看响应**  
+  Click "Send" and view the response
 
 ### 支持的路由格式 | Supported Route Formats
 

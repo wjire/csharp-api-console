@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.7] - 2026-02-14
+
+### ✨ 新功能 | New Features
+
+- **一键启动调试**：在 API Console 顶部新增 `启动调试` 按钮（位于 Send 左侧），可在发送请求前快速启动项目调试
+- **One-click Debug Start**: Added `Start Debug` button in API Console header (left of Send) to quickly start debugging before sending requests
+
 ## [1.0.6] - 2026-02-14
 
 ### ✨ 新功能 | New Features

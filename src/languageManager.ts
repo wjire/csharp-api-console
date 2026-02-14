@@ -29,6 +29,13 @@ const TEXT_MAP = {
         'webview.save': '保存',
         'webview.delete': '删除',
         'webview.remove': '移除',
+        'webview.debug.start': '启动调试',
+        'webview.debug.starting': '启动中...',
+        'webview.debug.running': '调试中',
+        'webview.debug.started': '调试已启动',
+        'webview.debug.alreadyRunning': '调试会话已在运行',
+        'webview.debug.failed': '启动调试失败',
+        'webview.debug.noProject': '缺少项目路径，无法启动调试',
 
         // WebView - 标签页
         'webview.tab.headers': 'Headers',
@@ -90,6 +97,13 @@ const TEXT_MAP = {
         'webview.save': 'Save',
         'webview.delete': 'Delete',
         'webview.remove': 'Remove',
+        'webview.debug.start': 'Start Debug',
+        'webview.debug.starting': 'Starting...',
+        'webview.debug.running': 'Debug Running',
+        'webview.debug.started': 'Debug session started',
+        'webview.debug.alreadyRunning': 'Debug session is already running',
+        'webview.debug.failed': 'Failed to start debugging',
+        'webview.debug.noProject': 'Missing project path, cannot start debugging',
 
         // WebView - Tabs
         'webview.tab.headers': 'Headers',

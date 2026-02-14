@@ -11,37 +11,8 @@ export class LaunchSettingsReader {
      * @returns Base URL (如：http://localhost:5000) 或 null
      */
     static getBaseUrl(projectPath: string | undefined): string | null {
-        if (!projectPath) {
-            return null;
-        }
-
-        const projectDir = path.dirname(projectPath);
-        const launchSettingsPath = path.join(projectDir, 'Properties', 'launchSettings.json');
-
-        if (!fs.existsSync(launchSettingsPath)) {
-            return null;
-        }
-
         try {
-            let content = fs.readFileSync(launchSettingsPath, 'utf8');
-
-            // 去除 BOM 头（如果有）
-            if (content.charCodeAt(0) === 0xFEFF) {
-                content = content.slice(1);
-            }
-
-            // 移除单行注释（以 // 开头的行）
-            content = this.removeComments(content);
-
-            // 解析 JSON
-            const json = JSON.parse(content);
-            const profiles = json.profiles ?? {};
-
-            // 找到 commandName = "Project" 的 profile
-            const projectProfile = Object.values(profiles).find(
-                (p: any) => p.commandName === 'Project'
-            ) as any;
-
+            const projectProfile = this.getProjectProfile(projectPath);
             if (!projectProfile) {
                 return null;
             }
@@ -93,6 +64,81 @@ export class LaunchSettingsReader {
             console.error('读取 launchSettings.json 失败:', error);
             return null;
         }
+    }
+
+    /**
+     * 从 launchSettings.json 读取 commandName=Project 的环境变量
+     * @param projectPath .csproj 文件路径
+     * @returns 环境变量键值对
+     */
+    static getEnvironmentVariables(projectPath: string | undefined): Record<string, string> {
+        try {
+            const projectProfile = this.getProjectProfile(projectPath);
+            if (!projectProfile) {
+                return {};
+            }
+
+            const rawEnv = projectProfile.environmentVariables;
+            if (!rawEnv || typeof rawEnv !== 'object') {
+                return {};
+            }
+
+            const env: Record<string, string> = {};
+            for (const [key, value] of Object.entries(rawEnv as Record<string, unknown>)) {
+                if (!key || value === undefined || value === null) {
+                    continue;
+                }
+
+                env[key] = String(value);
+            }
+
+            return env;
+        } catch (error) {
+            console.error('读取 launchSettings.json 环境变量失败:', error);
+            return {};
+        }
+    }
+
+    /**
+     * 获取 launchSettings.json 中 commandName=Project 的 profile
+     */
+    private static getProjectProfile(projectPath: string | undefined): any | null {
+        const json = this.readLaunchSettings(projectPath);
+        if (!json) {
+            return null;
+        }
+
+        const profiles = json.profiles ?? {};
+        const projectProfile = Object.values(profiles).find(
+            (p: any) => p.commandName === 'Project'
+        ) as any;
+
+        return projectProfile || null;
+    }
+
+    /**
+     * 读取并解析 launchSettings.json（支持 BOM 与整行注释）
+     */
+    private static readLaunchSettings(projectPath: string | undefined): any | null {
+        if (!projectPath) {
+            return null;
+        }
+
+        const projectDir = path.dirname(projectPath);
+        const launchSettingsPath = path.join(projectDir, 'Properties', 'launchSettings.json');
+
+        if (!fs.existsSync(launchSettingsPath)) {
+            return null;
+        }
+
+        let content = fs.readFileSync(launchSettingsPath, 'utf8');
+
+        if (content.charCodeAt(0) === 0xFEFF) {
+            content = content.slice(1);
+        }
+
+        content = this.removeComments(content);
+        return JSON.parse(content);
     }
 
     /**

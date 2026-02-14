@@ -143,6 +143,10 @@ export class ApiConsolePanel {
         url: string;
         headers: Record<string, string>;
         body?: string;
+        bodyMode?: 'json' | 'binary';
+        binaryBodyBase64?: string;
+        binaryContentType?: string;
+        binaryFileName?: string;
     }) {
         // 使用 HttpClient 服务发送请求
         const response = await this.httpClient.sendRequest(requestData);

@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "C# API Console",
     "description": "⚡ Lightweight API testing tool for ASP.NET Core - Test endpoints instantly with CodeLens, no tool switching needed!",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {

@@ -15,6 +15,8 @@
     let savedBaseUrls = []; // 存储用户保存的 base URLs
     let defaultBaseUrl = ''; // 默认的 base URL (来自 launchSettings.json)
     let tempBaseUrls = []; // 临时编辑中的 base URLs
+    let currentBodyMode = 'json';
+    let baseUrlMeasureCanvas = null;
 
     // 通知扩展 WebView 已准备好
     vscode.postMessage({ type: 'webviewReady' });
@@ -76,6 +78,38 @@
         if (select.options.length > 0) {
             select.selectedIndex = 0;
         }
+
+        updateBaseUrlSelectWidth();
+    }
+
+    function updateBaseUrlSelectWidth() {
+        const select = document.getElementById('baseUrlSelect');
+        const container = document.querySelector('.base-url-container');
+        if (!select || !container) {
+            return;
+        }
+
+        const selectedText = select.options.length > 0
+            ? (select.options[select.selectedIndex]?.text || select.value || '')
+            : (t('placeholder.baseUrl') || 'Select Base URL');
+
+        const computedStyle = window.getComputedStyle(select);
+        const canvas = baseUrlMeasureCanvas || (baseUrlMeasureCanvas = document.createElement('canvas'));
+        const context = canvas.getContext('2d');
+        if (!context) {
+            return;
+        }
+
+        context.font = computedStyle.font;
+        const textWidth = context.measureText(selectedText).width;
+
+        const minWidth = 160;
+        const maxWidth = 500;
+        const horizontalSpace = 56;
+        const targetWidth = Math.ceil(textWidth + horizontalSpace);
+        const finalWidth = Math.max(minWidth, Math.min(maxWidth, targetWidth));
+
+        container.style.width = `${finalWidth}px`;
     }
 
     // Render base URL list in management modal
@@ -218,6 +252,14 @@
         return select.value || '';
     }
 
+    document.getElementById('baseUrlSelect')?.addEventListener('change', () => {
+        updateBaseUrlSelectWidth();
+    });
+
+    window.addEventListener('resize', () => {
+        updateBaseUrlSelectWidth();
+    });
+
     document.getElementById('addHeaderBtn')?.addEventListener('click', addHeaderRow);
     document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
 
@@ -248,6 +290,59 @@
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById(tabName + 'Tab').classList.add('active');
         });
+    });
+
+    // Body mode switching
+    document.querySelectorAll('.body-mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const mode = tab.dataset.bodyMode;
+            if (!mode) {
+                return;
+            }
+
+            currentBodyMode = mode;
+
+            document.querySelectorAll('.body-mode-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            document.querySelectorAll('.body-mode-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.getElementById(`bodyMode${mode.charAt(0).toUpperCase()}${mode.slice(1)}`);
+            if (panel) {
+                panel.classList.add('active');
+            }
+        });
+    });
+
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const result = typeof reader.result === 'string' ? reader.result : '';
+                const base64 = result.includes(',') ? result.split(',')[1] : result;
+                resolve(base64);
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function updateBinaryFileNameDisplay() {
+        const binaryFileInput = document.getElementById('binaryFileInput');
+        const binaryFileName = document.getElementById('binaryFileName');
+        if (!binaryFileInput || !binaryFileName) {
+            return;
+        }
+
+        const selectedFile = binaryFileInput.files?.[0];
+        binaryFileName.textContent = selectedFile?.name || t('bodyMode.noFile');
+    }
+
+    document.getElementById('binaryFileSelectBtn')?.addEventListener('click', () => {
+        document.getElementById('binaryFileInput')?.click();
+    });
+
+    document.getElementById('binaryFileInput')?.addEventListener('change', () => {
+        updateBinaryFileNameDisplay();
     });
 
     // Auth type switching
@@ -384,11 +479,28 @@
 
         // Get body
         let body = undefined;
-        if (method === 'POST' || method === 'PUT') {
-            const bodyText = document.getElementById('bodyEditor').value.trim();
-            if (bodyText) {
-                body = bodyText;
+        let bodyMode = currentBodyMode;
+        let binaryBodyBase64 = undefined;
+        let binaryContentType = undefined;
+        let binaryFileName = undefined;
+        const canHaveBody = !['GET', 'HEAD'].includes(method.toUpperCase());
+        if (canHaveBody) {
+            if (currentBodyMode === 'binary') {
+                const binaryFileInput = document.getElementById('binaryFileInput');
+                const selectedFile = binaryFileInput?.files?.[0];
+                if (selectedFile) {
+                    binaryBodyBase64 = await fileToBase64(selectedFile);
+                    binaryContentType = selectedFile.type || undefined;
+                    binaryFileName = selectedFile.name || undefined;
+                }
+            } else {
+                const bodyText = document.getElementById('bodyEditor').value.trim();
+                if (bodyText) {
+                    body = bodyText;
+                }
             }
+        } else {
+            bodyMode = 'json';
         }
 
         // Send message to extension
@@ -398,7 +510,11 @@
                 method,
                 url: finalUrl,
                 headers,
-                body
+                body,
+                bodyMode,
+                binaryBodyBase64,
+                binaryContentType,
+                binaryFileName
             }
         });
     });
@@ -440,6 +556,25 @@
         document.getElementById('tokenInput').placeholder = t('placeholder.token');
         document.getElementById('bodyEditor').placeholder = t('placeholder.body');
         document.getElementById('queryStringInput').placeholder = t('placeholder.queryString');
+
+        // Update body mode labels
+        document.querySelectorAll('.body-mode-tab').forEach(tab => {
+            const bodyMode = tab.dataset.bodyMode;
+            if (bodyMode === 'json') {
+                tab.textContent = t('bodyMode.json');
+            } else if (bodyMode === 'binary') {
+                tab.textContent = t('bodyMode.binary');
+            }
+        });
+        const binaryFileLabel = document.querySelector('.binary-file-label');
+        if (binaryFileLabel) {
+            binaryFileLabel.textContent = t('bodyMode.binaryFile');
+        }
+        const binaryFileSelectBtn = document.getElementById('binaryFileSelectBtn');
+        if (binaryFileSelectBtn) {
+            binaryFileSelectBtn.textContent = t('bodyMode.selectFile');
+        }
+        updateBinaryFileNameDisplay();
 
         // Update manage button title
         document.getElementById('manageBaseUrlBtn').title = t('baseUrl.manage');

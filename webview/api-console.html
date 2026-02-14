@@ -41,7 +41,26 @@
                     </div>
 
                     <div id="bodyTab" class="tab-content active">
-                        <textarea class="body-editor" id="bodyEditor" placeholder="Enter JSON body here..."></textarea>
+                        <div class="body-mode-tabs">
+                            <button class="body-mode-tab active" data-body-mode="json" type="button">JSON</button>
+                            <button class="body-mode-tab" data-body-mode="binary" type="button">Binary</button>
+                        </div>
+
+                        <div class="body-mode-content">
+                            <div class="body-mode-panel active" id="bodyModeJson">
+                                <textarea class="body-editor" id="bodyEditor"
+                                    placeholder="Enter JSON body here..."></textarea>
+                            </div>
+                            <div class="body-mode-panel" id="bodyModeBinary">
+                                <label class="binary-file-label" for="binaryFileInput">Binary File</label>
+                                <div class="binary-file-row">
+                                    <button type="button" class="binary-file-select-btn"
+                                        id="binaryFileSelectBtn">选择文件</button>
+                                    <span class="binary-file-name" id="binaryFileName">未选择任何文件</span>
+                                </div>
+                                <input class="binary-file-input" type="file" id="binaryFileInput" />
+                            </div>
+                        </div>
                     </div>
 
                     <div id="authTab" class="tab-content">

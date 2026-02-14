@@ -36,6 +36,11 @@ const TEXT_MAP = {
         'webview.tab.query': 'Query',
         'webview.tab.body': 'Body',
         'webview.tab.response': 'Response',
+        'webview.bodyMode.json': 'JSON',
+        'webview.bodyMode.binary': 'Binary',
+        'webview.bodyMode.binaryFile': '二进制文件',
+        'webview.bodyMode.selectFile': '选择文件',
+        'webview.bodyMode.noFile': '未选择任何文件',
 
         // WebView - 输入框
         'webview.placeholder.baseUrl': '选择 Base URL',
@@ -92,6 +97,11 @@ const TEXT_MAP = {
         'webview.tab.query': 'Query',
         'webview.tab.body': 'Body',
         'webview.tab.response': 'Response',
+        'webview.bodyMode.json': 'JSON',
+        'webview.bodyMode.binary': 'Binary',
+        'webview.bodyMode.binaryFile': 'Binary File',
+        'webview.bodyMode.selectFile': 'Select file',
+        'webview.bodyMode.noFile': 'No file selected',
 
         // WebView - Placeholders
         'webview.placeholder.baseUrl': 'Select Base URL',

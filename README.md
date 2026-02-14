@@ -29,6 +29,8 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlManage.png)
 
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/fileUpload.png)
+
 ---
 
 ## ✨ 核心特性 | Key Features
@@ -86,6 +88,17 @@ Test API endpoints with one click directly in your code editor - no tool switchi
 - 自动缓存配置，读写性能优化，支持多项目独立配置  
   Auto-cached configuration with optimized read/write performance, supports independent config per project
 
+### 📦 **Body 模式（JSON / Binary）** | Body Modes (JSON / Binary)
+
+- Body 标签支持 JSON 与 Binary 两种模式，便于常规 API 请求与文件上传场景切换  
+  Body tab supports both JSON and Binary modes for regular API requests and file upload scenarios
+
+- Binary 模式默认优先使用 multipart/form-data（适配 ASP.NET Core 常见 IFormFile 接口）  
+  Binary mode sends multipart/form-data first by default (aligned with common ASP.NET Core IFormFile endpoints)
+
+- 若服务端返回 415，会自动回退 raw binary，提高接口兼容性  
+  Falls back to raw binary automatically on 415 to improve endpoint compatibility
+
 ## 🧪 使用方法 | Usage
 
 ### 快速开始 | Quick Start
@@ -107,7 +120,7 @@ Test API endpoints with one click directly in your code editor - no tool switchi
    - **Auth**: 添加 Bearer Token | Add Bearer Token
    - **Headers**: 添加自定义请求头 | Add custom headers
    - **Query**: 设置查询参数 | Set query parameters
-   - **Body**: 编辑请求体（POST/PUT） | Edit request body (for POST/PUT)
+  - **Body**: 选择 JSON 或 Binary；Binary 默认 multipart/form-data（415 自动回退 raw binary） | Choose JSON or Binary; Binary uses multipart/form-data first (auto fallback to raw binary on 415)
 
 5. **发送请求并查看响应**  
    Click "Send" and view the response

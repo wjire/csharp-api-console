@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.6] - 2026-02-14
+
+### ✨ 新功能 | New Features
+
+- **Body 模式扩展**：在 Body 标签下新增二级选择，支持 `JSON` 与 `Binary` 两种请求体模式，便于后续继续扩展
+- **Body Mode Extension**: Added sub-mode selector under Body tab with `JSON` and `Binary` request body modes for future extensibility
+
+- **Binary 文件发送**：Binary 模式支持选择本地文件并作为二进制请求体发送，同时自动处理 `Content-Type`（默认 `application/octet-stream`）与 `Content-Length`
+- **Binary File Sending**: Binary mode now supports selecting local files and sending as binary request body, with automatic handling of `Content-Type` (default `application/octet-stream`) and `Content-Length`
+
+- **ASP.NET Core 优先策略**：Binary 模式默认优先使用 `multipart/form-data`（更贴合 `IFormFile` 接口），仅在响应 `415` 时自动回退为 raw binary
+- **ASP.NET Core First Strategy**: Binary mode now sends `multipart/form-data` first (better aligned with `IFormFile` endpoints), and only falls back to raw binary on `415`
+
 ## [1.0.5] - 2026-02-13
 
 ### ✨ 新功能 | New Features

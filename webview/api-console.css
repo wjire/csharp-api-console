@@ -99,8 +99,9 @@ body {
 
 .base-url-container {
     display: flex;
-    flex: 1;
-    min-width: 200px;
+    flex: 0 1 auto;
+    width: 260px;
+    min-width: 160px;
     max-width: 500px;
 }
 
@@ -191,12 +192,13 @@ body {
 }
 
 .route-input {
-    flex: 2;
+    flex: 1 1 auto;
     min-width: 200px;
     padding: 10px 12px;
     background-color: var(--vscode-input-background);
     color: var(--vscode-input-foreground);
     border: 1px solid var(--vscode-input-border);
+    border-left: 2px solid var(--vscode-panel-border);
     border-right: none;
     border-radius: 0;
     font-family: monospace;
@@ -343,6 +345,86 @@ body {
     border: none;
     border-radius: 4px;
     cursor: pointer;
+}
+
+.body-mode-tabs {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+}
+
+.body-mode-tab {
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--vscode-foreground);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.body-mode-tab:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.body-mode-tab.active {
+    color: var(--vscode-button-background);
+    border-color: var(--vscode-button-background);
+}
+
+.body-mode-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.body-mode-panel {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.body-mode-panel.active {
+    display: flex;
+}
+
+.binary-file-label {
+    margin-bottom: 8px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.binary-file-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.binary-file-select-btn {
+    padding: 6px 12px;
+    background-color: #ffffff;
+    color: #111111;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.binary-file-select-btn:hover {
+    background-color: #f2f2f2;
+}
+
+.binary-file-name {
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.binary-file-input {
+    display: none;
 }
 
 .body-editor {
@@ -895,16 +977,19 @@ body {
 
     .route-input {
         flex: 1 1 auto;
+        min-width: 0;
         border-radius: 0 4px 0 0;
     }
 
     .send-button {
-        flex: 1 1 50%;
+        flex: 0 0 auto;
+        width: 110px;
         border-radius: 0 0 0 4px;
     }
 
     .manage-baseurl-btn {
-        flex: 1 1 50%;
+        flex: 0 0 auto;
+        width: 48px;
         border-radius: 0 0 4px 0;
     }
 }

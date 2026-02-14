@@ -26,8 +26,6 @@ Test APIs and start debugging with one click directly in your code editor - no t
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlManage.png)
 
-![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/fileUpload.png)
-
 ---
 
 ## ✨ 核心特性 | Key Features

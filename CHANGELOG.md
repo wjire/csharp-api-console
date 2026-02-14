@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.9] - 2026-02-14
+
+### 中文
+
+#### Fixed
+
+- 修复 1.0.8 中语言被误写死为英语的问题
+
+### English
+
+#### Fixed
+
+- Fixed an issue introduced in 1.0.8 where the language was mistakenly hardcoded to English
+
 ## [1.0.8] - 2026-02-14
 
 ### 中文

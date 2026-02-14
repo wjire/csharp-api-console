@@ -5,141 +5,203 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.8] - 2026-02-14
+
+### 中文
+
+#### Added
+
+- 新增 FormData Body 模式（位于 JSON 与 Binary 之间）
+- 新增 FormData 字段编辑器，支持 Text/File 混合
+
+### English
+
+#### Added
+
+- Added FormData body mode between JSON and Binary
+- Added FormData field editor with mixed Text/File support
+
 ## [1.0.7] - 2026-02-14
 
-### ✨ 新功能 | New Features
+### 中文
 
-- **一键启动调试**：在 API Console 顶部新增 `启动调试` 按钮（位于 Send 左侧），可在发送请求前快速启动项目调试
-- **One-click Debug Start**: Added `Start Debug` button in API Console header (left of Send) to quickly start debugging before sending requests
+#### Added
+
+- 新增一键启动调试按钮（位于 Send 左侧）
+
+### English
+
+#### Added
+
+- Added one-click debug start button (left of Send)
 
 ## [1.0.6] - 2026-02-14
 
-### ✨ 新功能 | New Features
+### 中文
 
-- **Body 模式扩展**：在 Body 标签下新增二级选择，支持 `JSON` 与 `Binary` 两种请求体模式，便于后续继续扩展
-- **Body Mode Extension**: Added sub-mode selector under Body tab with `JSON` and `Binary` request body modes for future extensibility
+#### Added
 
-- **Binary 文件发送**：Binary 模式支持选择本地文件并作为二进制请求体发送，同时自动处理 `Content-Type`（默认 `application/octet-stream`）与 `Content-Length`
-- **Binary File Sending**: Binary mode now supports selecting local files and sending as binary request body, with automatic handling of `Content-Type` (default `application/octet-stream`) and `Content-Length`
+- Body 模式支持 JSON 与 Binary
+- Binary 支持本地文件发送
 
-- **ASP.NET Core 优先策略**：Binary 模式默认优先使用 `multipart/form-data`（更贴合 `IFormFile` 接口），仅在响应 `415` 时自动回退为 raw binary
-- **ASP.NET Core First Strategy**: Binary mode now sends `multipart/form-data` first (better aligned with `IFormFile` endpoints), and only falls back to raw binary on `415`
+#### Changed
+
+- Binary 默认优先 multipart/form-data，415 时回退 raw binary
+
+### English
+
+#### Added
+
+- Added JSON and Binary body modes
+- Added local file sending in Binary mode
+
+#### Changed
+
+- Binary sends multipart/form-data first, then falls back to raw binary on 415
 
 ## [1.0.5] - 2026-02-13
 
-### ✨ 新功能 | New Features
+### 中文
 
-- **Query 参数快速输入**：Query 标签新增文本输入框，支持直接粘贴查询字符串（如 `?id=1&name=dankit`）。输入框参数与手动添加的参数列表互不干扰，发送请求时优先使用输入框参数
-- **Quick Query Input**: Added text input in Query tab to paste query strings (e.g., `?id=1&name=dankit`). Input field and manual parameter list are independent, with input field taking priority when sending requests
+#### Added
+
+- Query 标签新增快速输入框，支持直接粘贴查询字符串
+
+#### Changed
+
+- 发送请求时优先使用快速输入框参数
+
+### English
+
+#### Added
+
+- Added quick query input in Query tab for pasted query strings
+
+#### Changed
+
+- Query text input now takes priority when sending requests
 
 ## [1.0.4] - 2026-02-13
 
-### ⚡ 性能优化 | Performance Improvements
+### 中文
 
-- **CodeLens 位置优化**：确保 API 测试 CodeLens 始终显示在官方"引用" CodeLens 右侧，避免位置错乱
-- **CodeLens Position Optimization**: Ensure API testing CodeLens always appears to the right of the official "References" CodeLens to avoid display order issues
+#### Changed
+
+- 优化 CodeLens 排序，API Test 始终显示在官方 References 右侧
+
+### English
+
+#### Changed
+
+- Improved CodeLens ordering so API Test appears to the right of official References
 
 ---
 
 ## [1.0.3] - 2026-02-13
 
-### 🎨 界面优化 | UI Improvements
+### 中文
 
-- **布局重构**：顶部集中显示请求控件（HTTP 方法 + Base URL + Route + 操作按钮），下方左右分栏（请求参数 / 响应区域）
-- **Layout Refactoring**: Top bar with request controls (HTTP method + Base URL + Route + action buttons), bottom split view (request params / response area)
+#### Added
 
-### 🔧 功能改进 | Feature Improvements
+- 支持 launchSettings.json 注释行过滤
 
-- **launchSettings.json 注释支持**：自动过滤 `//` 开头的注释行，避免 JSON 解析错误
-- **launchSettings.json Comment Support**: Automatically filter comment lines starting with `//` to prevent JSON parsing errors
+#### Changed
 
-- **模态框交互优化**：Base URL 管理模态框只能通过按钮关闭，避免误操作导致未保存内容丢失
-- **Modal Interaction Optimization**: Base URL management modal can only be closed via buttons to prevent accidental loss of unsaved changes
+- 重构 API Console 布局为“顶部请求栏 + 下方双栏”
+- 优化 Base URL 管理弹窗交互（仅按钮关闭）
 
-### ⚡ 性能优化 | Performance Improvements
+#### Fixed
 
-- **资源清理改进**：优化 HttpClient 资源释放逻辑，确保面板关闭时正确清理
-- **Resource Cleanup Improvement**: Optimized HttpClient resource disposal logic to ensure proper cleanup when panel is closed
+- 改进资源释放，面板关闭时清理更稳定
+
+### English
+
+#### Added
+
+- Added launchSettings.json comment-line filtering
+
+#### Changed
+
+- Refactored API Console layout to top request bar + bottom split panels
+- Improved Base URL modal interaction with button-only close
+
+#### Fixed
+
+- Improved resource cleanup stability when the panel closes
 
 ---
 
 ## [1.0.2] - 2026-02-12
 
-### ✨ 新功能 | New Features
+### 中文
 
-- **Base URL 管理**：新增 Base URL 管理功能，支持添加、编辑、删除自定义 Base URL
-- **Base URL Management**: Added Base URL management feature with support for adding, editing, and deleting custom Base URLs
+#### Added
 
-- **环境切换**：可以快速在开发、测试、生产等多个环境之间切换
-- **Environment Switching**: Quick switching between development, staging, production and other environments
+- 新增 Base URL 管理（增删改）
+- 支持多环境 Base URL 快速切换
+- 配置持久化到 .vscode/csharp-api-console-config.json
 
-- **配置持久化**：Base URL 配置保存在 `.vscode/csharp-api-console-config.json` 文件中，每个项目独立配置
-- **Persistent Configuration**: Base URL configs are saved in `.vscode/csharp-api-console-config.json`, independent per project
+#### Changed
 
-### 🎨 界面优化 | UI Improvements
+- 优化发送状态反馈与紧凑布局体验
 
-- **请求状态反馈**：点击 Send 按钮后自动置灰，防止重复提交
-- **Request status feedback**: Send button is automatically disabled after clicking to prevent duplicate submissions
+### English
 
-- **加载状态提示**：发送请求时显示"正在发送中..."提示，响应完成后恢复
-- **Loading state indicator**: Display "Sending..." message while request is in progress, restore after completion
+#### Added
 
-- **紧凑布局**：优化按钮和输入框布局，所有元素高度统一，无缝连接
-- **Compact Layout**: Optimized button and input layout, all elements unified in height with seamless connection
+- Added Base URL management (add/edit/delete)
+- Added quick environment switching via Base URLs
+- Added persisted config in .vscode/csharp-api-console-config.json
+
+#### Changed
+
+- Improved sending-state feedback and compact layout
 
 ---
 
 ## [1.0.1] - 2026-02-12
 
-### 🐛 Bug 修复 | Bug Fixes
+### 中文
 
-- **修复可空类型解析**：支持 `Task<long?>`, `Task<Person?>` 等可空泛型返回类型的方法识别
-- **Fixed nullable type parsing**: Support method detection with nullable generic return types like `Task<long?>`, `Task<Person?>`
+#### Fixed
+
+- 修复可空泛型返回类型识别（如 Task<long?>、Task<Person?>）
+
+### English
+
+#### Fixed
+
+- Fixed nullable generic return type parsing (e.g., Task<long?>, Task<Person?>)
 
 ---
 
 ## [1.0.0] - 2026-02-11
 
-### 🎉 首次发布 | Initial Release
+### 中文
 
-第一个正式版本，为 ASP.NET Core 开发者提供便捷的 API 测试工具。  
-First stable release - a convenient API testing tool for ASP.NET Core developers.
+#### Added
 
-### ✨ 核心功能 | Key Features
+- 首次正式发布，提供 ASP.NET Core API 测试能力
+- 新增 CodeLens 一键测试入口与多标签测试面板
+- 新增智能端点识别与 launchSettings 自动 Base URL
+- 新增 Auth / Headers / Query / Body 配置与格式化响应
 
-- **CodeLens 集成**：在 Action 方法上显示 "⚡ Test" 按钮，精确定位到方法名位置
-- **CodeLens Integration**: Display "⚡ Test" button above Action methods, precisely positioned at method name
+#### Changed
 
-- **智能端点检测**：自动识别 HTTP 方法、路由、参数，支持 `[controller]`、`[action]`、`[ApiVersion]` 占位符
-- **Smart Endpoint Detection**: Auto-detect HTTP methods, routes, parameters, support `[controller]`, `[action]`, `[ApiVersion]` placeholders
+- 引入两层缓存、防抖与延迟加载以优化性能
 
-- **自动配置 Base URL**：读取 `launchSettings.json`，自动构建完整 URL，实时监听文件变化
-- **Auto Base URL Configuration**: Read `launchSettings.json`, auto-build complete URLs, real-time file watching
+### English
 
-- **多标签测试**：同时打开多个测试面板，支持 Auth、Headers、Query、Body 配置
-- **Multi-tab Testing**: Open multiple test panels simultaneously, support Auth, Headers, Query, Body configuration
+#### Added
 
-- **格式化响应**：显示状态码、Headers 和格式化的 JSON
-- **Formatted Response**: Display status code, Headers and formatted JSON
+- Initial stable release for ASP.NET Core API testing
+- Added CodeLens test entry and multi-tab test panels
+- Added smart endpoint detection and auto Base URL from launchSettings
+- Added Auth / Headers / Query / Body configuration and formatted response
 
-### 🚀 性能优化 | Performance
+#### Changed
 
-- **两层缓存架构**：项目配置缓存 + CodeLens 缓存
-- **Two-layer Cache Architecture**: Project config cache + CodeLens cache
-
-- **防抖机制**：避免输入时频繁扫描（可配置延迟 300ms）
-- **Debounce Mechanism**: Avoid frequent scanning on input (configurable delay 300ms)
-
-- **延迟加载**：仅在点击测试时加载项目配置
-- **Lazy Loading**: Load project configuration only when clicking test button
-
-### ⚙️ 配置选项 | Configuration
-
-- `csharpApiConsole.codeLensDebounceDelay` - CodeLens 扫描防抖延迟（默认 300ms）
-- `csharpApiConsole.codeLensDebounceDelay` - CodeLens scanning debounce delay (default 300ms)
-
-- `csharpApiConsole.defaultApiVersion` - 默认 API 版本（默认 "1.0"）
-- `csharpApiConsole.defaultApiVersion` - Default API version (default "1.0")
+- Introduced two-layer cache, debounce, and lazy loading for performance
 
 ---
 
@@ -148,4 +210,5 @@ First stable release - a convenient API testing tool for ASP.NET Core developers
 如有问题或建议，欢迎访问：  
 For issues or suggestions, please visit:
 
-**Gitee**: https://gitee.com/dankit/csharp-api-console/issues
+**GitHub**: https://github.com/wjire/csharp-api-console/issues
+**Gitee** : https://gitee.com/dankit/csharp-api-console/issues

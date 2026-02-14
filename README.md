@@ -3,8 +3,8 @@
 > ⚡ **轻量、直观的 ASP.NET Core API 测试与一键调试工具**  
 > A lightweight and intuitive ASP.NET Core API testing and one-click debugging tool
 
-在代码中一键测试 API 端点并快速启动调试，无需离开编辑器，无需切换工具！  
-Test API endpoints and start debugging with one click directly in your code editor - no tool switching needed!
+在代码中一键测试 API 并快速启动调试，无需离开编辑器，无需切换工具！  
+Test APIs and start debugging with one click directly in your code editor - no tool switching needed!
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/dankit.csharp-api-console)](https://marketplace.visualstudio.com/items?itemName=dankit.csharp-api-console)
@@ -12,18 +12,15 @@ Test API endpoints and start debugging with one click directly in your code edit
 
 ---
 
-## 📦 仓库地址 | Repository
-
-- **GitHub**: https://github.com/wjire/csharp-api-console
-- **Gitee (国内镜像)**: https://gitee.com/dankit/csharp-api-console
-
----
-
 ## 📷 预览 | Preview
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/codeLens.png)
 
-![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/consolePanel.png)
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/json.png)
+
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/formData.png)
+
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/binary.png)
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlSelect.png)
 
@@ -38,27 +35,27 @@ Test API endpoints and start debugging with one click directly in your code edit
 ### 🎯 **CodeLens 集成** | CodeLens Integration
 
 - 在每个 Controller Action 方法上自动显示测试按钮  
-  Auto-show test button above each Controller Action method
+  Automatically shows a test button above each Controller action method
 
 - 精确定位到方法名位置，与"引用"按钮并列显示  
-  Precisely positioned at method name, displayed alongside "References" button
+  Precisely positioned at the method name and displayed alongside the "References" button
 
 - 支持同时打开多个测试标签页  
-  Support opening multiple test tabs simultaneously
+  Supports opening multiple test tabs simultaneously
 
-### ⚡ **智能端点检测** | Smart Endpoint Detection
+### ⚡ **智能路由解析** | Smart Route Resolution
 
-- 自动识别 `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpDelete]` 特性  
-  Auto-detect HTTP method attributes
+- 自动识别 `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpDelete]` 等特性  
+  Automatically detects HTTP method attributes
 
 - 解析 `[Route]` 特性，支持控制器和方法级路由  
-  Parse `[Route]` attributes at controller and method levels
+  Parses `[Route]` attributes at both controller and action levels
 
 - 智能处理 `[controller]`, `[action]` 占位符  
-  Smart handling of `[controller]` and `[action]` placeholders
+  Handles `[controller]` and `[action]` placeholders intelligently
 
 - 支持 `[ApiVersion]` 特性和自定义默认版本  
-  Support `[ApiVersion]` attribute with configurable default version
+  Supports the `[ApiVersion]` attribute with a configurable default version
 
 ### 🐞 **一键启动调试** | One-click Debug Start
 
@@ -77,98 +74,24 @@ Test API endpoints and start debugging with one click directly in your code edit
 ### 🔗 **自动配置 Base URL** | Auto Base URL Configuration
 
 - 自动读取项目的 `launchSettings.json` 文件  
-  Auto-read project's `launchSettings.json` file
+  Automatically reads the project's `launchSettings.json` file
 
-- 智能解析 `applicationUrl` 和 `launchUrl`，自动构建完整的 API 端点 URL  
-  Smart parse `applicationUrl` and `launchUrl` to build complete endpoint URLs
+- 智能解析 `applicationUrl` 和 `launchUrl`，自动构建完整的 API URL  
+  Intelligently parses `applicationUrl` and `launchUrl` to build complete API URLs
 
 - 实时监听文件变化，配置更新后自动刷新  
-  Real-time file watching, auto-refresh when configuration changes
+  Watches files in real time and refreshes automatically when configuration changes
 
 - 无需手动输入 Base URL，开箱即用  
-  No need to manually input Base URL, works out of the box
+  No manual Base URL input required; works out of the box
 
 ### 🛠️ **Base URL 管理** | Base URL Management
 
-- 点击请求区域右侧的 **⚙️ 配置按钮**打开 Base URL 管理面板  
-  Click the **⚙️ Config button** on the right side of request area to open Base URL management panel
-
 - 支持添加、编辑、删除自定义 Base URL，方便在多个环境间切换  
-  Support adding, editing, and deleting custom Base URLs for easy environment switching
+  Supports adding, editing, and deleting custom Base URLs for easy environment switching
 
-- 所有自定义 Base URL 保存在项目的 `.vscode/csharp-api-console-config.json` 文件中  
-  All custom Base URLs are saved in `.vscode/csharp-api-console-config.json` in your project
-
-- 自动缓存配置，读写性能优化，支持多项目独立配置  
-  Auto-cached configuration with optimized read/write performance, supports independent config per project
-
-### 📦 **Body 模式（JSON / Binary）** | Body Modes (JSON / Binary)
-
-- Body 标签支持 JSON 与 Binary 两种模式，便于常规 API 请求与文件上传场景切换  
-  Body tab supports both JSON and Binary modes for regular API requests and file upload scenarios
-
-- Binary 模式默认优先使用 multipart/form-data（适配 ASP.NET Core 常见 IFormFile 接口）  
-  Binary mode sends multipart/form-data first by default (aligned with common ASP.NET Core IFormFile endpoints)
-
-- 若服务端返回 415，会自动回退 raw binary，提高接口兼容性  
-  Falls back to raw binary automatically on 415 to improve endpoint compatibility
-
-## 🧪 使用方法 | Usage
-
-### 快速开始 | Quick Start
-
-1. **打开 Controller 文件**  
-   Open a C# Controller file
-
-2. **查看 CodeLens 按钮**  
-   You'll see a CodeLens button above each Action method:
-   ```
-   ⚡ GET /api/users
-   ```
-
-3. **点击按钮打开测试面板**  
-   Click the button to open the test panel
-
-4. **配置请求**（可选）  
-   Configure your request (optional):
-   - **Auth**: 添加 Bearer Token | Add Bearer Token
-   - **Headers**: 添加自定义请求头 | Add custom headers
-   - **Query**: 设置查询参数 | Set query parameters
-  - **Body**: 选择 JSON 或 Binary；Binary 默认 multipart/form-data（415 自动回退 raw binary） | Choose JSON or Binary; Binary uses multipart/form-data first (auto fallback to raw binary on 415)
-
-5. **（可选）先启动调试**  
-  点击 **启动调试** 按钮，启动当前项目调试（会自动携带 launchSettings 环境变量）  
-  **(Optional) Start debugging first**  
-  Click **Start Debug** to launch debugging for the current project (with launchSettings environment variables)
-
-6. **发送请求并查看响应**  
-  Click "Send" and view the response
-
-### 支持的路由格式 | Supported Route Formats
-
-```csharp
-// ✅ 控制器级路由 | Controller-level route
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
-
-// ✅ 方法级路由 | Method-level route
-[HttpGet("query")]
-public IActionResult Query() { }
-
-// ✅ [action] 占位符 | [action] placeholder
-[Route("api/[controller]/[action]")]
-public class TestController : ControllerBase
-{
-    public IActionResult Test1() { }  // → /api/test/Test1
-}
-
-// ✅ API 版本 | API versioning
-[ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/[controller]")]
-public class ProductsController : ControllerBase
-```
-
----
+- 所有自定义 Base URL 均基于项目，同一项目的不同 API 无需重复设置  
+  Base URL settings are project-scoped and shared across APIs in the same project.
 
 ## ⚙️ 配置 | Configuration
 
@@ -193,35 +116,9 @@ Search for `C# API Console` in VS Code settings:
 
 ## 💡 Base URL 管理说明 | Base URL Management Guide
 
-### 如何管理 Base URL | How to Manage Base URLs
-
-1. **打开管理面板**  
-   点击测试面板中请求区域右侧的 **⚙️ 配置按钮**  
-   Click the **⚙️ Config button** on the right side of the request area in the test panel
-
-2. **添加新 Base URL**  
-   点击 **"+ Add New Base URL"** 按钮，输入完整的 URL（如 `https://api.example.com`）  
-   Click **"+ Add New Base URL"** button and enter the complete URL (e.g., `https://api.example.com`)
-
-3. **编辑 Base URL**  
-   直接在输入框中修改 URL 内容  
-   Edit the URL directly in the input field
-
-4. **删除 Base URL**  
-   点击 URL 旁边的 **🗑️ 删除按钮**  
-   Click the **🗑️ Delete button** next to the URL
-
-5. **保存更改**  
-   点击 **✓ 保存按钮**保存所有更改  
-   Click the **✓ Save button** to save all changes
-
-### 配置文件位置 | Configuration File Location
-
-所有自定义的 Base URL 存储在：  
-All custom Base URLs are stored in:
+**配置文件位置 | Configuration File Location**
 
 ```
-<项目根目录>/.vscode/csharp-api-console-config.json
 <Project Root>/.vscode/csharp-api-console-config.json
 ```
 
@@ -269,12 +166,10 @@ All custom Base URLs are stored in:
 
 ---
 
-## 🤝 反馈与支持 | Feedback & Support
+## 📦 仓库地址 | Repository
 
-- **报告问题** | Report Issues: [GitHub Issues](https://github.com/wjire/csharp-api-console/issues)
-- **功能建议** | Feature Requests: [GitHub Issues](https://github.com/wjire/csharp-api-console/issues)
-- **源代码** | Source Code: [GitHub Repository](https://github.com/wjire/csharp-api-console)
-- **国内镜像** | China Mirror: [Gitee Repository](https://gitee.com/dankit/csharp-api-console)
+- **GitHub**: https://github.com/wjire/csharp-api-console
+- **Gitee**: https://gitee.com/dankit/csharp-api-console
 
 ---
 

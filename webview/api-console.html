@@ -44,6 +44,7 @@
                     <div id="bodyTab" class="tab-content active">
                         <div class="body-mode-tabs">
                             <button class="body-mode-tab active" data-body-mode="json" type="button">JSON</button>
+                            <button class="body-mode-tab" data-body-mode="formdata" type="button">FormData</button>
                             <button class="body-mode-tab" data-body-mode="binary" type="button">Binary</button>
                         </div>
 
@@ -51,6 +52,23 @@
                             <div class="body-mode-panel active" id="bodyModeJson">
                                 <textarea class="body-editor" id="bodyEditor"
                                     placeholder="Enter JSON body here..."></textarea>
+                            </div>
+                            <div class="body-mode-panel" id="bodyModeFormData">
+                                <div class="formdata-content-type" id="formDataContentTypeHint">Content-Type:
+                                    multipart/form-data</div>
+                                <div class="formdata-header-row">
+                                    <div class="formdata-col-enabled" id="formDataHeaderUse">Use</div>
+                                    <div class="formdata-col-key" id="formDataHeaderKey">Key</div>
+                                    <div class="formdata-col-type" id="formDataHeaderType">Type</div>
+                                    <div class="formdata-col-value" id="formDataHeaderValue">Value</div>
+                                    <div class="formdata-col-actions" id="formDataHeaderActions">Actions</div>
+                                </div>
+                                <div class="formdata-list" id="formDataList"></div>
+                                <div class="formdata-actions">
+                                    <button type="button" class="add-button" id="addFormDataRowBtn">Add Row</button>
+                                    <button type="button" class="remove-button" id="clearDisabledFormDataBtn">Clear
+                                        Disabled</button>
+                                </div>
                             </div>
                             <div class="body-mode-panel" id="bodyModeBinary">
                                 <label class="binary-file-label" for="binaryFileInput">Binary File</label>

@@ -19,6 +19,13 @@
     let baseUrlMeasureCanvas = null;
     let currentDebugState = 'idle';
 
+    function getBodyModePanelId(mode) {
+        if (mode === 'formdata') {
+            return 'bodyModeFormData';
+        }
+        return `bodyMode${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
+    }
+
     // 通知扩展 WebView 已准备好
     vscode.postMessage({ type: 'webviewReady' });
     // 注意：不再主动请求 baseUrls，后端会在初始化完成后主动发送
@@ -263,6 +270,8 @@
 
     document.getElementById('addHeaderBtn')?.addEventListener('click', addHeaderRow);
     document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
+    document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
+    document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
 
     document.getElementById('headersList')?.addEventListener('click', (e) => {
         const target = e.target;
@@ -275,6 +284,52 @@
         const target = e.target;
         if (target.classList.contains('remove-button')) {
             target.closest('.param-row')?.remove();
+        }
+    });
+
+    document.getElementById('formDataList')?.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.classList.contains('formdata-delete-btn')) {
+            target.closest('.formdata-row')?.remove();
+            ensureFormDataHasAtLeastOneRow();
+            return;
+        }
+
+        if (target.classList.contains('formdata-file-select-btn')) {
+            const row = target.closest('.formdata-row');
+            row?.querySelector('.formdata-file-input')?.click();
+            return;
+        }
+
+        if (target.classList.contains('formdata-file-clear-btn')) {
+            const row = target.closest('.formdata-row');
+            if (row) {
+                const fileInput = row.querySelector('.formdata-file-input');
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+                updateFormDataFileName(row);
+            }
+        }
+    });
+
+    document.getElementById('formDataList')?.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.classList.contains('formdata-type-select')) {
+            const row = target.closest('.formdata-row');
+            if (row) {
+                const selectedType = target.value === 'file' ? 'file' : 'text';
+                row.dataset.fieldType = selectedType;
+                updateFormDataRowMode(row);
+            }
+            return;
+        }
+
+        if (target.classList.contains('formdata-file-input')) {
+            const row = target.closest('.formdata-row');
+            if (row) {
+                updateFormDataFileName(row);
+            }
         }
     });
 
@@ -307,12 +362,148 @@
             tab.classList.add('active');
 
             document.querySelectorAll('.body-mode-panel').forEach(p => p.classList.remove('active'));
-            const panel = document.getElementById(`bodyMode${mode.charAt(0).toUpperCase()}${mode.slice(1)}`);
+            const panel = document.getElementById(getBodyModePanelId(mode));
             if (panel) {
                 panel.classList.add('active');
             }
         });
     });
+
+    function createFormDataRow(initialData = {}) {
+        const row = document.createElement('div');
+        const fieldType = initialData.type === 'file' ? 'file' : 'text';
+        row.className = 'formdata-row';
+        row.dataset.fieldType = fieldType;
+
+        row.innerHTML = `
+            <div class="formdata-enabled-wrap">
+                <input type="checkbox" class="formdata-enabled" ${initialData.enabled === false ? '' : 'checked'} />
+            </div>
+            <input type="text" class="formdata-input formdata-key" placeholder="${t('placeholder.key')}" value="${escapeHtml(initialData.key || '')}" />
+            <select class="formdata-type-select">
+                <option value="text">${t('bodyMode.formDataTypeText') || 'Text'}</option>
+                <option value="file">${t('bodyMode.formDataTypeFile') || 'File'}</option>
+            </select>
+            <div class="formdata-value-wrap">
+                <input type="text" class="formdata-value-input" placeholder="${t('placeholder.value')}" value="${escapeHtml(initialData.value || '')}" />
+                <div class="formdata-value-file">
+                    <button type="button" class="formdata-file-select-btn">${t('bodyMode.selectFile')}</button>
+                    <span class="formdata-file-name">${t('bodyMode.noFile')}</span>
+                    <input type="file" class="formdata-file-input" />
+                </div>
+            </div>
+            <div class="formdata-row-actions">
+                <button type="button" class="formdata-file-clear-btn">${t('bodyMode.formDataClearFile') || 'Clear'}</button>
+                <button type="button" class="formdata-delete-btn">${t('remove')}</button>
+            </div>
+        `;
+
+        const select = row.querySelector('.formdata-type-select');
+        if (select) {
+            select.value = fieldType;
+        }
+        updateFormDataRowMode(row);
+        return row;
+    }
+
+    function updateFormDataRowMode(row) {
+        const isFileMode = (row.dataset.fieldType || 'text') === 'file';
+        row.classList.toggle('file-mode', isFileMode);
+        updateFormDataFileName(row);
+    }
+
+    function updateFormDataFileName(row) {
+        const fileNameElement = row.querySelector('.formdata-file-name');
+        const fileInput = row.querySelector('.formdata-file-input');
+        if (!fileNameElement || !fileInput) {
+            return;
+        }
+
+        const selectedFile = fileInput.files?.[0];
+        fileNameElement.textContent = selectedFile?.name || t('bodyMode.noFile');
+    }
+
+    function addFormDataRow(initialData = {}) {
+        const list = document.getElementById('formDataList');
+        if (!list) {
+            return;
+        }
+        list.appendChild(createFormDataRow(initialData));
+    }
+
+    function ensureFormDataHasAtLeastOneRow() {
+        const list = document.getElementById('formDataList');
+        if (!list) {
+            return;
+        }
+
+        if (!list.querySelector('.formdata-row')) {
+            addFormDataRow();
+        }
+    }
+
+    function clearDisabledFormDataRows() {
+        const list = document.getElementById('formDataList');
+        if (!list) {
+            return;
+        }
+
+        list.querySelectorAll('.formdata-row').forEach(row => {
+            const enabledCheckbox = row.querySelector('.formdata-enabled');
+            if (enabledCheckbox && !enabledCheckbox.checked) {
+                row.remove();
+            }
+        });
+
+        ensureFormDataHasAtLeastOneRow();
+    }
+
+    async function collectFormDataFields() {
+        const fields = [];
+        const rows = document.querySelectorAll('#formDataList .formdata-row');
+
+        for (const row of rows) {
+            const enabled = row.querySelector('.formdata-enabled')?.checked;
+            if (!enabled) {
+                continue;
+            }
+
+            const key = row.querySelector('.formdata-key')?.value?.trim();
+            if (!key) {
+                continue;
+            }
+
+            const fieldType = row.querySelector('.formdata-type-select')?.value === 'file' ? 'file' : 'text';
+            if (fieldType === 'file') {
+                const fileInput = row.querySelector('.formdata-file-input');
+                const file = fileInput?.files?.[0];
+                if (!file) {
+                    continue;
+                }
+
+                const valueBase64 = await fileToBase64(file);
+                fields.push({
+                    key,
+                    type: 'file',
+                    fileName: file.name,
+                    contentType: file.type || 'application/octet-stream',
+                    valueBase64
+                });
+                continue;
+            }
+
+            const value = row.querySelector('.formdata-value-input')?.value ?? '';
+            fields.push({
+                key,
+                type: 'text',
+                value
+            });
+        }
+
+        return fields;
+    }
+
+    ensureFormDataHasAtLeastOneRow();
 
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
@@ -515,6 +706,7 @@
         let binaryBodyBase64 = undefined;
         let binaryContentType = undefined;
         let binaryFileName = undefined;
+        let formDataFields = undefined;
         const canHaveBody = !['GET', 'HEAD'].includes(method.toUpperCase());
         if (canHaveBody) {
             if (currentBodyMode === 'binary') {
@@ -524,6 +716,13 @@
                     binaryBodyBase64 = await fileToBase64(selectedFile);
                     binaryContentType = selectedFile.type || undefined;
                     binaryFileName = selectedFile.name || undefined;
+                }
+            } else if (currentBodyMode === 'formdata') {
+                formDataFields = await collectFormDataFields();
+                if (!formDataFields.length) {
+                    sendButton.disabled = false;
+                    showToast(t('bodyMode.formDataEmpty') || 'FormData has no valid fields', 'error');
+                    return;
                 }
             } else {
                 const bodyText = document.getElementById('bodyEditor').value.trim();
@@ -546,7 +745,8 @@
                 bodyMode,
                 binaryBodyBase64,
                 binaryContentType,
-                binaryFileName
+                binaryFileName,
+                formDataFields
             }
         });
     });
@@ -595,9 +795,71 @@
             const bodyMode = tab.dataset.bodyMode;
             if (bodyMode === 'json') {
                 tab.textContent = t('bodyMode.json');
+            } else if (bodyMode === 'formdata') {
+                tab.textContent = t('bodyMode.formData');
             } else if (bodyMode === 'binary') {
                 tab.textContent = t('bodyMode.binary');
             }
+        });
+        const formDataContentTypeHint = document.getElementById('formDataContentTypeHint');
+        if (formDataContentTypeHint) {
+            formDataContentTypeHint.textContent = t('bodyMode.formDataContentType') || 'Content-Type: multipart/form-data';
+        }
+        const formDataHeaderUse = document.getElementById('formDataHeaderUse');
+        if (formDataHeaderUse) {
+            formDataHeaderUse.textContent = t('bodyMode.formDataHeaderUse') || 'Use';
+        }
+        const formDataHeaderKey = document.getElementById('formDataHeaderKey');
+        if (formDataHeaderKey) {
+            formDataHeaderKey.textContent = t('bodyMode.formDataHeaderKey') || 'Key';
+        }
+        const formDataHeaderType = document.getElementById('formDataHeaderType');
+        if (formDataHeaderType) {
+            formDataHeaderType.textContent = t('bodyMode.formDataHeaderType') || 'Type';
+        }
+        const formDataHeaderValue = document.getElementById('formDataHeaderValue');
+        if (formDataHeaderValue) {
+            formDataHeaderValue.textContent = t('bodyMode.formDataHeaderValue') || 'Value';
+        }
+        const formDataHeaderActions = document.getElementById('formDataHeaderActions');
+        if (formDataHeaderActions) {
+            formDataHeaderActions.textContent = t('bodyMode.formDataHeaderActions') || 'Actions';
+        }
+        const addFormDataRowBtn = document.getElementById('addFormDataRowBtn');
+        if (addFormDataRowBtn) {
+            addFormDataRowBtn.textContent = t('bodyMode.formDataAddRow') || 'Add Row';
+        }
+        const clearDisabledFormDataBtn = document.getElementById('clearDisabledFormDataBtn');
+        if (clearDisabledFormDataBtn) {
+            clearDisabledFormDataBtn.textContent = t('bodyMode.formDataClearDisabled') || 'Clear Disabled';
+        }
+        document.querySelectorAll('#formDataList .formdata-row').forEach(row => {
+            const keyInput = row.querySelector('.formdata-key');
+            if (keyInput) {
+                keyInput.placeholder = t('placeholder.key');
+            }
+            const valueInput = row.querySelector('.formdata-value-input');
+            if (valueInput) {
+                valueInput.placeholder = t('placeholder.value');
+            }
+            const typeSelect = row.querySelector('.formdata-type-select');
+            if (typeSelect) {
+                typeSelect.querySelector('option[value="text"]').textContent = t('bodyMode.formDataTypeText') || 'Text';
+                typeSelect.querySelector('option[value="file"]').textContent = t('bodyMode.formDataTypeFile') || 'File';
+            }
+            const fileSelectBtn = row.querySelector('.formdata-file-select-btn');
+            if (fileSelectBtn) {
+                fileSelectBtn.textContent = t('bodyMode.selectFile');
+            }
+            const fileClearBtn = row.querySelector('.formdata-file-clear-btn');
+            if (fileClearBtn) {
+                fileClearBtn.textContent = t('bodyMode.formDataClearFile') || 'Clear';
+            }
+            const deleteBtn = row.querySelector('.formdata-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.textContent = t('remove');
+            }
+            updateFormDataFileName(row);
         });
         const binaryFileLabel = document.querySelector('.binary-file-label');
         if (binaryFileLabel) {

@@ -419,6 +419,159 @@ body {
     display: flex;
 }
 
+.formdata-content-type {
+    margin-bottom: 8px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.formdata-header-row,
+.formdata-row {
+    display: grid;
+    grid-template-columns: 56px minmax(120px, 1fr) 68px minmax(180px, 1fr) max-content;
+    gap: 8px;
+    align-items: center;
+}
+
+.formdata-col-actions {
+    justify-self: end;
+    text-align: right;
+}
+
+.formdata-header-row {
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 12px;
+}
+
+.formdata-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.formdata-row {
+    margin-bottom: 8px;
+}
+
+.formdata-row:last-child {
+    margin-bottom: 0;
+}
+
+.formdata-enabled-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+.formdata-enabled {
+    width: 16px;
+    height: 16px;
+}
+
+.formdata-input,
+.formdata-type-select,
+.formdata-value-input {
+    width: 100%;
+    padding: 6px 8px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+}
+
+.formdata-value-file {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.formdata-row.file-mode .formdata-value-file {
+    display: flex;
+}
+
+.formdata-row.file-mode .formdata-value-input {
+    display: none;
+}
+
+.formdata-file-select-btn,
+.formdata-file-clear-btn,
+.binary-file-select-btn {
+    padding: 6px 10px;
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.formdata-file-select-btn:hover,
+.formdata-file-clear-btn:hover,
+.binary-file-select-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.formdata-file-name {
+    flex: 1;
+    min-width: 0;
+    color: var(--vscode-descriptionForeground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.formdata-file-clear-btn {
+    display: none;
+}
+
+.formdata-file-input {
+    display: none;
+}
+
+.formdata-row-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+    justify-self: end;
+}
+
+.formdata-row.file-mode .formdata-row-actions .formdata-file-clear-btn {
+    display: inline-flex;
+}
+
+.formdata-delete-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    cursor: pointer;
+}
+
+.formdata-delete-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.formdata-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.formdata-actions .add-button,
+.formdata-actions .remove-button {
+    width: auto;
+}
+
 .binary-file-label {
     margin-bottom: 8px;
     color: var(--vscode-descriptionForeground);
@@ -428,20 +581,6 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.binary-file-select-btn {
-    padding: 6px 12px;
-    background-color: #ffffff;
-    color: #111111;
-    border: 1px solid var(--vscode-input-border);
-    border-radius: 4px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.binary-file-select-btn:hover {
-    background-color: #f2f2f2;
 }
 
 .binary-file-name {

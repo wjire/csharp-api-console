@@ -1,15 +1,25 @@
 /**
  * HTTP 请求选项
  */
+export interface FormDataField {
+    key: string;
+    type: 'text' | 'file';
+    value?: string;
+    valueBase64?: string;
+    fileName?: string;
+    contentType?: string;
+}
+
 export interface HttpRequestOptions {
     method: string;
     url: string;
     headers: Record<string, string>;
     body?: string;
-    bodyMode?: 'json' | 'binary';
+    bodyMode?: 'json' | 'formdata' | 'binary';
     binaryBodyBase64?: string;
     binaryContentType?: string;
     binaryFileName?: string;
+    formDataFields?: FormDataField[];
 }
 
 /**
@@ -29,6 +39,53 @@ export interface HttpResponse {
  * 负责发送 HTTP 请求并返回响应
  */
 export class HttpClient {
+    private escapeDispositionValue(value: string): string {
+        return value.replace(/"/g, '\\"').replace(/\r/g, '').replace(/\n/g, '');
+    }
+
+    private buildMultipartFormData(fields: FormDataField[]): { boundary: string; body: Buffer } {
+        const boundary = `----CSharpApiConsole${Date.now().toString(16)}`;
+        const chunks: Buffer[] = [];
+
+        for (const field of fields) {
+            const key = this.escapeDispositionValue(field.key);
+
+            if (field.type === 'file') {
+                if (!field.valueBase64) {
+                    continue;
+                }
+
+                const fileName = this.escapeDispositionValue(field.fileName || 'upload.bin');
+                const contentType = field.contentType || 'application/octet-stream';
+                const fileBuffer = Buffer.from(field.valueBase64, 'base64');
+
+                chunks.push(Buffer.from(
+                    `--${boundary}\r\n`
+                    + `Content-Disposition: form-data; name="${key}"; filename="${fileName}"\r\n`
+                    + `Content-Type: ${contentType}\r\n\r\n`,
+                    'utf-8'
+                ));
+                chunks.push(fileBuffer);
+                chunks.push(Buffer.from('\r\n', 'utf-8'));
+                continue;
+            }
+
+            const value = field.value || '';
+            chunks.push(Buffer.from(
+                `--${boundary}\r\n`
+                + `Content-Disposition: form-data; name="${key}"\r\n\r\n`
+                + `${value}\r\n`,
+                'utf-8'
+            ));
+        }
+
+        chunks.push(Buffer.from(`--${boundary}--\r\n`, 'utf-8'));
+        return {
+            boundary,
+            body: Buffer.concat(chunks)
+        };
+    }
+
     private sendRawRequest(httpModule: any, requestOptions: any, payload?: string | Buffer): Promise<{
         statusCode: number;
         headers: Record<string, string>;
@@ -82,7 +139,10 @@ export class HttpClient {
             const binaryBuffer = options.bodyMode === 'binary' && options.binaryBodyBase64
                 ? Buffer.from(options.binaryBodyBase64, 'base64')
                 : undefined;
-            const hasPayload = Boolean(binaryBuffer) || Boolean(options.body);
+            const formDataPayload = options.bodyMode === 'formdata' && options.formDataFields?.length
+                ? this.buildMultipartFormData(options.formDataFields)
+                : undefined;
+            const hasPayload = Boolean(binaryBuffer) || Boolean(options.body) || Boolean(formDataPayload);
             const requestHeaders: Record<string, string> = { ...options.headers };
             const hasContentTypeHeader = Object.keys(requestHeaders).some(
                 key => key.toLowerCase() === 'content-type'
@@ -90,7 +150,9 @@ export class HttpClient {
             const shouldUseMultipartFirst = options.bodyMode === 'binary' && binaryBuffer && !hasContentTypeHeader;
 
             if (hasPayload && !hasContentTypeHeader) {
-                if (!shouldUseMultipartFirst) {
+                if (formDataPayload) {
+                    requestHeaders['Content-Type'] = `multipart/form-data; boundary=${formDataPayload.boundary}`;
+                } else if (!shouldUseMultipartFirst) {
                     requestHeaders['Content-Type'] = options.bodyMode === 'binary'
                         ? (options.binaryContentType || 'application/octet-stream')
                         : 'application/json';
@@ -107,7 +169,9 @@ export class HttpClient {
             };
 
             // 如果有 body，设置 Content-Length（multipart 模式会在构建 multipart body 后单独设置）
-            if (!shouldUseMultipartFirst && binaryBuffer) {
+            if (formDataPayload) {
+                requestOptions.headers['Content-Length'] = formDataPayload.body.length;
+            } else if (!shouldUseMultipartFirst && binaryBuffer) {
                 requestOptions.headers['Content-Length'] = binaryBuffer.length;
             } else if (options.body) {
                 requestOptions.headers['Content-Length'] = Buffer.byteLength(options.body);
@@ -163,7 +227,7 @@ export class HttpClient {
                 response = await this.sendRawRequest(
                     httpModule,
                     requestOptions,
-                    binaryBuffer || options.body
+                    formDataPayload?.body || binaryBuffer || options.body
                 );
             }
 

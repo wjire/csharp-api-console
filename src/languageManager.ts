@@ -44,7 +44,20 @@ const TEXT_MAP = {
         'webview.tab.body': 'Body',
         'webview.tab.response': 'Response',
         'webview.bodyMode.json': 'JSON',
+        'webview.bodyMode.formData': 'FormData',
         'webview.bodyMode.binary': 'Binary',
+        'webview.bodyMode.formDataContentType': 'Content-Type: multipart/form-data',
+        'webview.bodyMode.formDataHeaderUse': '启用',
+        'webview.bodyMode.formDataHeaderKey': 'Key',
+        'webview.bodyMode.formDataHeaderType': '类型',
+        'webview.bodyMode.formDataHeaderValue': '值',
+        'webview.bodyMode.formDataHeaderActions': '操作',
+        'webview.bodyMode.formDataTypeText': 'Text',
+        'webview.bodyMode.formDataTypeFile': 'File',
+        'webview.bodyMode.formDataAddRow': '添加行',
+        'webview.bodyMode.formDataClearDisabled': '清理未启用项',
+        'webview.bodyMode.formDataClearFile': '清空',
+        'webview.bodyMode.formDataEmpty': 'FormData 没有可发送的有效字段',
         'webview.bodyMode.binaryFile': '二进制文件',
         'webview.bodyMode.selectFile': '选择文件',
         'webview.bodyMode.noFile': '未选择任何文件',
@@ -112,7 +125,20 @@ const TEXT_MAP = {
         'webview.tab.body': 'Body',
         'webview.tab.response': 'Response',
         'webview.bodyMode.json': 'JSON',
+        'webview.bodyMode.formData': 'FormData',
         'webview.bodyMode.binary': 'Binary',
+        'webview.bodyMode.formDataContentType': 'Content-Type: multipart/form-data',
+        'webview.bodyMode.formDataHeaderUse': 'Use',
+        'webview.bodyMode.formDataHeaderKey': 'Key',
+        'webview.bodyMode.formDataHeaderType': 'Type',
+        'webview.bodyMode.formDataHeaderValue': 'Value',
+        'webview.bodyMode.formDataHeaderActions': 'Actions',
+        'webview.bodyMode.formDataTypeText': 'Text',
+        'webview.bodyMode.formDataTypeFile': 'File',
+        'webview.bodyMode.formDataAddRow': 'Add Row',
+        'webview.bodyMode.formDataClearDisabled': 'Clear Disabled',
+        'webview.bodyMode.formDataClearFile': 'Clear',
+        'webview.bodyMode.formDataEmpty': 'FormData has no valid fields',
         'webview.bodyMode.binaryFile': 'Binary File',
         'webview.bodyMode.selectFile': 'Select file',
         'webview.bodyMode.noFile': 'No file selected',
@@ -165,7 +191,8 @@ export class LanguageManager {
         const vscodeLanguage = vscode.env.language.toLowerCase();
 
         // 判断是否为中文环境
-        this.currentLanguage = vscodeLanguage.startsWith('zh') ? 'zh-cn' : 'en';
+        // this.currentLanguage = vscodeLanguage.startsWith('zh') ? 'zh-cn' : 'en';
+        this.currentLanguage = 'en';
     }
 
     /**

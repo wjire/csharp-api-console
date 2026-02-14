@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.10] - 2026-02-15
+
+### 中文
+
+#### Changed
+
+- 优化扩展打包, 减少打包体积，提升稳定性与一致性
+
+### English
+
+#### Changed
+
+- Optimized extension packaging to reduce package size and improve stability and consistency
+
 ## [1.0.9] - 2026-02-14
 
 ### 中文

@@ -107,26 +107,40 @@ Test APIs and start debugging with one click directly in your code editor - no t
 Search for `C# API Console` in VS Code settings:
 
 ### `csharpApiConsole.codeLensDebounceDelay`
-- **类型 | Type**: `number`
-- **默认值 | Default**: `300`
-- **说明 | Description**:  
+- **Default**: `300`
   CodeLens 扫描防抖延迟（毫秒）。设置为 0 禁用防抖。  
   CodeLens scanning debounce delay in milliseconds. Set to 0 to disable.
 
 ### `csharpApiConsole.defaultApiVersion`
-- **类型 | Type**: `string`
-- **默认值 | Default**: `"1.0"`
-- **说明 | Description**:  
+- **Default**: `"1.0"`
   控制器无 `[ApiVersion]` 特性时的默认版本。留空则不替换占位符。  
   Default API version when controller has no `[ApiVersion]` attribute. Leave empty to keep placeholder.
 
 ### `csharpApiConsole.requestHistoryLimit`
-- **类型 | Type**: `number`
-- **默认值 | Default**: `10`
-- **范围 | Range**: `1 - 20`
-- **说明 | Description**:  
+- **Default**: `10`
+- **Range**: `1 - 20`
   每个接口保留的历史请求条数上限。  
   Maximum number of request history entries kept per endpoint.
+
+### `csharpApiConsole.requestTimeoutSeconds`
+- **Default**: `30`
+  HTTP 请求超时时间（秒）。  
+  HTTP request timeout in seconds.
+
+### `csharpApiConsole.largeResponseThresholdKb`
+- **Default**: `1024`
+  大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。  
+  Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.
+
+### `csharpApiConsole.maxResponseLineNumbers`
+- **Default**: `2000`
+  UI 中最多渲染的响应行号数量。  
+  Maximum response line numbers rendered in the UI.
+
+### `csharpApiConsole.requestHistoryMaxBodyKb`
+- **Default**: `32`
+  请求历史中可保存的 Body 最大大小（KB），超过后将保存为空。  
+  Maximum request body size in KB to persist in request history. Bodies larger than this are stored as empty.
 
 ---
 

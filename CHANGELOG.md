@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.13] - 2026-02-15
+
+### 中文
+
+#### Changed
+
+- 新增请求超时配置（默认 30s）
+- 增加大响应保护（阈值降级渲染 + 行号渲染上限，可配置）
+- 请求历史增加 Body 大小上限（默认 32KB，超限不保存 Body）
+
+### English
+
+#### Changed
+
+- Added configurable request timeout (default 30s)
+- Added large-response protection (threshold fallback rendering + max line-number limit, configurable)
+- Added request-history body size cap (default 32KB; body is not stored when exceeded)
+
 ## [1.0.12] - 2026-02-15
 
 ### 中文

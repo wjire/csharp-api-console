@@ -19,6 +19,8 @@
     let baseUrlMeasureCanvas = null;
     let currentDebugState = 'idle';
     let requestHistory = [];
+    let largeResponseThresholdBytes = 1024 * 1024;
+    let maxRenderLineNumbers = 2000;
 
     function getBodyModePanelId(mode) {
         if (mode === 'formdata') {
@@ -1063,6 +1065,20 @@
                 requestHistory = Array.isArray(message.data) ? message.data : [];
                 renderRequestHistory();
                 break;
+            case 'renderSettings': {
+                const settings = message.data || {};
+                const threshold = Number(settings.largeResponseThresholdBytes);
+                const lineLimit = Number(settings.maxResponseLineNumbers);
+
+                if (Number.isFinite(threshold) && threshold > 0) {
+                    largeResponseThresholdBytes = Math.floor(threshold);
+                }
+
+                if (Number.isFinite(lineLimit) && lineLimit > 0) {
+                    maxRenderLineNumbers = Math.floor(lineLimit);
+                }
+                break;
+            }
             case 'debugStatus': {
                 const debugStatus = message.data?.status;
                 if (debugStatus === 'idle' || debugStatus === 'starting' || debugStatus === 'running' || debugStatus === 'error') {
@@ -1145,6 +1161,31 @@
         }
     }
 
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function renderLineNumbers(lineCount) {
+        const safeLineCount = Math.max(1, lineCount);
+        const visibleLineCount = Math.min(safeLineCount, maxRenderLineNumbers);
+        let lineNumbers = '';
+
+        for (let index = 1; index <= visibleLineCount; index += 1) {
+            lineNumbers += `<span class="line-number">${index}</span>`;
+        }
+
+        if (safeLineCount > visibleLineCount) {
+            lineNumbers += '<span class="line-number">…</span>';
+        }
+
+        document.getElementById('lineNumbers').innerHTML = lineNumbers;
+    }
+
     // Show loading state
     function showLoading() {
         const statusValue = document.getElementById('statusValue');
@@ -1166,16 +1207,6 @@
         // Re-enable send button
         document.getElementById('sendButton').disabled = false;
 
-        // Escape HTML helper
-        const escapeHtml = (text) => {
-            return text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        };
-
         if (data.success) {
             // Update status
             const statusText = data.statusCode >= 200 && data.statusCode < 300 ? '200 OK' : data.statusCode + ' Error';
@@ -1190,23 +1221,29 @@
             // Update time
             document.getElementById('timeValue').textContent = data.duration + ' ms';
 
-            // Try to format JSON
+            const isLargeResponse = bodySize >= largeResponseThresholdBytes;
             let formattedBody = data.body;
-            try {
-                const jsonObj = JSON.parse(data.body);
-                formattedBody = JSON.stringify(jsonObj, null, 2);
-            } catch {
-                // Not JSON, keep as is
+            let responseHtml = '';
+
+            if (isLargeResponse) {
+                const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
+                renderLineNumbers(lineCount);
+                responseHtml = `<span style="color: var(--vscode-descriptionForeground);">Large response detected. Rendered in plain text mode for performance.</span>\n\n${escapeHtml(formattedBody)}`;
+            } else {
+                try {
+                    const jsonObj = JSON.parse(data.body);
+                    formattedBody = JSON.stringify(jsonObj, null, 2);
+                } catch {
+                    // Not JSON, keep as is
+                }
+
+                const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
+                renderLineNumbers(lineCount);
+
+                responseHtml = highlightJSON(formattedBody);
             }
 
-            // Generate line numbers
-            const lines = formattedBody.split('\n');
-            const lineNumbers = lines.map((_, i) => '<span class="line-number">' + (i + 1) + '</span>').join('');
-            document.getElementById('lineNumbers').innerHTML = lineNumbers;
-
-            // Update response body with syntax highlighting
-            const highlightedBody = highlightJSON(formattedBody);
-            document.getElementById('responseBody').innerHTML = highlightedBody;
+            document.getElementById('responseBody').innerHTML = responseHtml;
 
             // Update headers
             const headerCount = Object.keys(data.headers || {}).length;
@@ -1237,7 +1274,7 @@
 
             // Display error in response body
             document.getElementById('responseBody').innerHTML = escapeHtml(data.error);
-            document.getElementById('lineNumbers').innerHTML = '<span class="line-number">1</span>';
+            renderLineNumbers(1);
 
             document.getElementById('headerCount').textContent = '0';
             document.getElementById('responseHeaders').innerHTML = '';

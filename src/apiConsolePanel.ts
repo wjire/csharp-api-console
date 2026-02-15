@@ -159,6 +159,12 @@ export class ApiConsolePanel {
                         data: lang.getWebViewTexts()
                     });
 
+                    // 发送渲染配置
+                    this.panel.webview.postMessage({
+                        type: 'renderSettings',
+                        data: this.getRenderSettings()
+                    });
+
                     // 主动发送 Base URLs（确保 currentProjectPath 已设置）
                     await this.loadBaseUrls();
 
@@ -336,7 +342,10 @@ export class ApiConsolePanel {
         }>;
     }) {
         // 使用 HttpClient 服务发送请求
-        const response = await this.httpClient.sendRequest(requestData);
+        const response = await this.httpClient.sendRequest({
+            ...requestData,
+            timeoutMs: this.getRequestTimeoutMs()
+        });
 
         await this.saveRequestHistory(requestData, response);
 
@@ -359,6 +368,46 @@ export class ApiConsolePanel {
         }
 
         return Math.min(20, Math.max(1, Math.floor(configuredLimit)));
+    }
+
+    private getRequestTimeoutMs(): number {
+        const timeoutSeconds = vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<number>('requestTimeoutSeconds', 30);
+
+        if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+            return 30000;
+        }
+
+        return Math.floor(timeoutSeconds * 1000);
+    }
+
+    private getRenderSettings(): { largeResponseThresholdBytes: number; maxResponseLineNumbers: number } {
+        const config = vscode.workspace.getConfiguration('csharpApiConsole');
+        const thresholdKb = config.get<number>('largeResponseThresholdKb', 1024);
+        const maxLineNumbers = config.get<number>('maxResponseLineNumbers', 2000);
+
+        const safeThresholdKb = Number.isFinite(thresholdKb) && thresholdKb > 0 ? thresholdKb : 1024;
+        const safeMaxLineNumbers = Number.isFinite(maxLineNumbers) && maxLineNumbers > 0
+            ? Math.floor(maxLineNumbers)
+            : 2000;
+
+        return {
+            largeResponseThresholdBytes: Math.floor(safeThresholdKb * 1024),
+            maxResponseLineNumbers: safeMaxLineNumbers
+        };
+    }
+
+    private getRequestHistoryMaxBodyBytes(): number {
+        const maxBodyKb = vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<number>('requestHistoryMaxBodyKb', 32);
+
+        if (!Number.isFinite(maxBodyKb) || maxBodyKb <= 0) {
+            return 32 * 1024;
+        }
+
+        return Math.floor(maxBodyKb * 1024);
     }
 
     private getCurrentEndpointKey(fallbackMethod?: string): string | null {
@@ -479,7 +528,11 @@ export class ApiConsolePanel {
         }
 
         const query = this.sanitizeQuery(rawQuery);
-        const body = this.sanitizeBody(requestData.body || '');
+        const sanitizedBody = this.sanitizeBody(requestData.body || '');
+        const maxBodyBytes = this.getRequestHistoryMaxBodyBytes();
+        const body = Buffer.byteLength(sanitizedBody, 'utf8') > maxBodyBytes
+            ? ''
+            : sanitizedBody;
 
         const item: RequestHistoryItem = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

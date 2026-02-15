@@ -14,6 +14,7 @@ export interface HttpRequestOptions {
     method: string;
     url: string;
     headers: Record<string, string>;
+    timeoutMs?: number;
     body?: string;
     bodyMode?: 'json' | 'formdata' | 'binary';
     binaryBodyBase64?: string;
@@ -86,7 +87,7 @@ export class HttpClient {
         };
     }
 
-    private sendRawRequest(httpModule: any, requestOptions: any, payload?: string | Buffer): Promise<{
+    private sendRawRequest(httpModule: any, requestOptions: any, timeoutMs: number, payload?: string | Buffer): Promise<{
         statusCode: number;
         headers: Record<string, string>;
         body: string;
@@ -112,6 +113,10 @@ export class HttpClient {
                 reject(error);
             });
 
+            req.setTimeout(timeoutMs, () => {
+                req.destroy(new Error(`Request timeout (${Math.floor(timeoutMs / 1000)}s)`));
+            });
+
             if (payload !== undefined) {
                 req.write(payload);
             }
@@ -127,6 +132,9 @@ export class HttpClient {
      */
     async sendRequest(options: HttpRequestOptions): Promise<HttpResponse> {
         const startTime = Date.now();
+        const timeoutMs = options.timeoutMs && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
+            ? Math.floor(options.timeoutMs)
+            : 30000;
 
         try {
             const https = require('https');
@@ -205,7 +213,7 @@ export class HttpClient {
                     }
                 };
 
-                response = await this.sendRawRequest(httpModule, multipartRequestOptions, multipartBody);
+                response = await this.sendRawRequest(httpModule, multipartRequestOptions, timeoutMs, multipartBody);
 
                 // multipart 失败且为 415 时，回退 raw binary
                 if (response.statusCode === 415) {
@@ -220,13 +228,14 @@ export class HttpClient {
                         }
                     };
 
-                    response = await this.sendRawRequest(httpModule, rawBinaryRequestOptions, binaryBuffer);
+                    response = await this.sendRawRequest(httpModule, rawBinaryRequestOptions, timeoutMs, binaryBuffer);
                 }
             } else {
                 // 非 binary 或用户已显式指定 Content-Type 时，沿用常规发送
                 response = await this.sendRawRequest(
                     httpModule,
                     requestOptions,
+                    timeoutMs,
                     formDataPayload?.body || binaryBuffer || options.body
                 );
             }

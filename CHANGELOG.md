@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.12] - 2026-02-15
+
+### 中文
+
+#### Added
+
+- Body(JSON) 新增格式化按钮
+
+### English
+
+#### Added
+
+- Added a format button for Body (JSON)
+
 ## [1.0.11] - 2026-02-15
 
 ### 中文

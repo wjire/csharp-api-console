@@ -41,6 +41,11 @@
         if (panel) {
             panel.classList.add('active');
         }
+
+        const formatJsonBtn = document.getElementById('formatJsonBtn');
+        if (formatJsonBtn) {
+            formatJsonBtn.style.display = mode === 'json' ? 'inline-block' : 'none';
+        }
     }
 
     // 通知扩展 WebView 已准备好
@@ -313,6 +318,25 @@
         }
     }
 
+    function formatJsonEditorContent() {
+        const bodyEditor = document.getElementById('bodyEditor');
+        if (!bodyEditor) {
+            return;
+        }
+
+        const bodyText = bodyEditor.value;
+        if (!bodyText || !bodyText.trim()) {
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(bodyText);
+            bodyEditor.value = JSON.stringify(parsed, null, 2);
+        } catch {
+            showToast(t('error.invalidJson') || 'Invalid JSON format', 'error');
+        }
+    }
+
     function renderRequestHistory() {
         const historySelect = document.getElementById('historySelect');
         const clearButton = document.getElementById('clearHistoryBtn');
@@ -387,6 +411,7 @@
     document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
     document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
     document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
+    document.getElementById('formatJsonBtn')?.addEventListener('click', formatJsonEditorContent);
     document.getElementById('historySelect')?.addEventListener('change', () => {
         const historySelect = document.getElementById('historySelect');
         const selectedId = historySelect?.value;
@@ -890,6 +915,7 @@
         document.getElementById('addQueryBtn').textContent = t('add');
         document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
         document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
+        document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
 
         // Update tab texts
         document.querySelectorAll('.tab').forEach(tab => {

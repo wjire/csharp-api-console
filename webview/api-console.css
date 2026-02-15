@@ -410,9 +410,14 @@ body {
 .body-mode-tabs {
     display: flex;
     gap: 10px;
+    align-items: center;
     border-bottom: 1px solid var(--vscode-panel-border);
     margin-bottom: 12px;
     padding-bottom: 8px;
+}
+
+.body-mode-spacer {
+    flex: 1;
 }
 
 .body-mode-tab {
@@ -449,6 +454,19 @@ body {
 
 .body-mode-panel.active {
     display: flex;
+}
+
+.json-format-btn {
+    padding: 6px 12px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.json-format-btn:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
 .formdata-content-type {

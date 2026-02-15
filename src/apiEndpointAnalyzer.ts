@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
 import { ApiEndpoint } from './models/apiEndpoint';
+import { ApiRouteBuilder } from './apiRouteBuilder';
 
 /**
  * API 端点分析器
  * 检测 C# Controller 中的 API 端点，解析参数信息
  */
 export class ApiEndpointAnalyzer {
-    // ApiVersion 缓存：Key = filePath + controllerName, Value = version | null
-    // 避免同一个控制器的多个 action 重复查找
-    private apiVersionCache = new Map<string, string | null>();
+    private readonly routeBuilder = new ApiRouteBuilder();
 
     /**
      * 从文档位置检测 API 端点
@@ -50,7 +49,15 @@ export class ApiEndpointAnalyzer {
         }
 
         // 构建完整路由
-        const fullRoute = this.buildFullRoute(controllerRoute, routeTemplate, controllerName, methodName, lines, methodLine, document.uri.fsPath);
+        const fullRoute = this.routeBuilder.buildFullRoute(
+            controllerRoute,
+            routeTemplate,
+            controllerName,
+            methodName,
+            lines,
+            methodLine,
+            document.uri.fsPath
+        );
 
         // 性能优化：延迟加载项目配置
         // 不在扫描时查找项目文件和读取配置，而是在用户点击时才加载
@@ -183,180 +190,6 @@ export class ApiEndpointAnalyzer {
         }
 
         return { controllerName, controllerRoute };
-    }
-
-    /**
-     * 构建完整路由
-     */
-    private buildFullRoute(
-        controllerRoute: string | null,
-        actionRoute: string,
-        controllerName: string,
-        actionName: string,
-        lines: string[],
-        methodLine: number,
-        filePath: string
-    ): string {
-        let route = '';
-
-        // 处理控制器路由
-        if (controllerRoute) {
-            route = controllerRoute;
-
-            // 替换 [controller] 占位符（转小写，符合 ASP.NET Core 约定）
-            const controllerShortName = controllerName.replace(/Controller$/, '').toLowerCase();
-            route = route.replace(/\[controller\]/gi, controllerShortName);
-
-            // 替换 [action] 占位符（去掉 Async 后缀 + 转小写）
-            const actionShortName = actionName.replace(/Async$/i, '').toLowerCase();
-            route = route.replace(/\[action\]/gi, actionShortName);
-        }
-
-        // 拼接 Action 路由
-        if (actionRoute) {
-            if (route) {
-                route = `${route}/${actionRoute}`;
-            } else {
-                route = actionRoute;
-            }
-        }
-
-        // ⚡ 替换 API 版本占位符 {version:apiVersion}, {v:apiVersion} 等
-        route = this.replaceApiVersionPlaceholder(route, lines, methodLine, controllerName, filePath);
-
-        // 确保以 / 开头
-        if (route && !route.startsWith('/')) {
-            route = '/' + route;
-        }
-
-        return route || '/';
-    }
-
-    /**     
-     * 替换路由中的 API 版本占位符
-     * 支持任意变量名 + :apiVersion 约束，如 {version:apiVersion}, {v:apiVersion} 等
-     */
-    private replaceApiVersionPlaceholder(
-        route: string,
-        lines: string[],
-        methodLine: number,
-        controllerName: string,
-        filePath: string
-    ): string {
-        // 匹配任意形式的 API 版本占位符：{xxx:apiVersion}
-        const apiVersionRegex = /\{\w+:apiVersion\}/gi;
-
-        if (!apiVersionRegex.test(route)) {
-            return route; // 没有版本占位符，直接返回
-        }
-
-        // 1. 优先：查找 [ApiVersion("x.x")] 特性（带缓存）
-        const apiVersion = this.findApiVersionAttribute(lines, methodLine, controllerName, filePath);
-
-        if (apiVersion) {
-            // 找到特性，使用特性中的版本号
-            return route.replace(apiVersionRegex, apiVersion);
-        }
-
-        // 2. 其次：使用配置的默认版本
-        const config = vscode.workspace.getConfiguration('csharpApiConsole');
-        const defaultVersion = config.get<string>('defaultApiVersion', '1.0');
-
-        // 3. 如果配置为空字符串，保持占位符不替换
-        if (defaultVersion === '') {
-            return route;
-        }
-
-        // 使用默认版本替换
-        return route.replace(apiVersionRegex, defaultVersion);
-    }
-
-    /**
-     * 查找 [ApiVersion("x.x")] 特性（带缓存）
-     * 在控制器类定义附近查找（向上最多查找 20 行）
-     */
-    private findApiVersionAttribute(
-        lines: string[],
-        methodLine: number,
-        controllerName: string,
-        filePath: string
-    ): string | null {
-        // ⚡ 检查缓存：同一个控制器只查找一次
-        const cacheKey = `${filePath}:${controllerName}`;
-        if (this.apiVersionCache.has(cacheKey)) {
-            return this.apiVersionCache.get(cacheKey)!;
-        }
-
-        // 向上查找控制器定义
-        for (let i = methodLine; i >= 0 && i >= methodLine - 50; i--) {
-            const line = lines[i].trim();
-
-            // 找到类定义，开始在类定义上方查找 ApiVersion 特性
-            if (/\bclass\s+\w+Controller/.test(line)) {
-                // 在类定义前查找 ApiVersion 特性（最多向上 20 行）
-                for (let j = i - 1; j >= 0 && j >= i - 20; j--) {
-                    const attrLine = lines[j].trim();
-
-                    // ⚡ 检查 1：跳过被注释的行
-                    if (this.isCommentedLine(lines, j)) {
-                        continue;
-                    }
-
-                    // 匹配 [ApiVersion("1.0")] 或 [ApiVersion("1.0", "2.0")]
-                    const match = attrLine.match(/\[ApiVersion\s*\(\s*["']([\d.]+)["']/i);
-                    if (match) {
-                        const version = match[1];
-                        // ⚡ 存入缓存
-                        this.apiVersionCache.set(cacheKey, version);
-                        return version;
-                    }
-
-                    // 遇到另一个类定义，停止查找
-                    if (/\bclass\b/.test(attrLine)) {
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-
-        // 未找到，缓存 null
-        this.apiVersionCache.set(cacheKey, null);
-        return null;
-    }
-
-    /**
-     * 检查是否是被注释的行
-     * 支持单行注释 (//) 和多行注释 (slash-star star-slash)
-     */
-    private isCommentedLine(lines: string[], lineIndex: number): boolean {
-        const line = lines[lineIndex];
-        const trimmed = line.trim();
-
-        // 检查 1：单行注释 //
-        if (trimmed.startsWith('//')) {
-            return true;
-        }
-
-        // 检查 2：多行注释 /* */
-        // 简化处理：向上查找最近的 /* 和 */
-        let inComment = false;
-        for (let i = lineIndex; i >= 0 && i >= lineIndex - 10; i--) {
-            const checkLine = lines[i];
-
-            // 如果当前行有 */，说明注释已结束
-            if (checkLine.includes('*/')) {
-                inComment = false;
-            }
-
-            // 如果当前行有 /*，说明进入注释区域
-            if (checkLine.includes('/*')) {
-                inComment = true;
-                break;
-            }
-        }
-
-        return inComment;
     }
 
     /**

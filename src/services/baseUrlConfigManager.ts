@@ -31,8 +31,6 @@ export class BaseUrlConfigManager {
 
         // 加载配置到内存
         this.loadConfigToMemory();
-
-        console.log('[BaseUrlConfigManager] Initialized with config path:', this.configFilePath);
     }
 
     /**
@@ -48,7 +46,6 @@ export class BaseUrlConfigManager {
             const content = fs.readFileSync(this.configFilePath, 'utf-8');
             const config = JSON.parse(content);
             this.configData = config.baseUrls || {};
-            console.log('[BaseUrlConfigManager] Loaded config from file');
         } catch (error) {
             console.error('[BaseUrlConfigManager] Failed to load config:', error);
             this.configData = {};
@@ -100,7 +97,6 @@ export class BaseUrlConfigManager {
         try {
             const config = { baseUrls: this.configData };
             fs.writeFileSync(this.configFilePath, JSON.stringify(config, null, 2), 'utf-8');
-            console.log('[BaseUrlConfigManager] Config saved to file');
         } catch (error) {
             console.error('[BaseUrlConfigManager] Failed to write config:', error);
         }

@@ -61,7 +61,7 @@ export class LaunchSettingsReader {
                 return null;
             }
         } catch (error) {
-            console.error('读取 launchSettings.json 失败:', error);
+            console.error('Failed to read launchSettings.json:', error);
             return null;
         }
     }
@@ -94,7 +94,7 @@ export class LaunchSettingsReader {
 
             return env;
         } catch (error) {
-            console.error('读取 launchSettings.json 环境变量失败:', error);
+            console.error('Failed to read launchSettings.json environment variables:', error);
             return {};
         }
     }

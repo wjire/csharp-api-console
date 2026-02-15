@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.14] - 2026-02-15
+
+### 中文
+
+#### Changed
+
+- 重构 API 路由构造器，优化路由构建逻辑并移除冗余代码
+- 修改 CSS 字体设置为 `Consolas`，统一样式
+
+### English
+
+#### Changed
+
+- Refactored the API route builder to optimize route construction logic and remove redundant code
+- Updated CSS font settings to `Consolas` for consistent styling
+
 ## [1.0.13] - 2026-02-15
 
 ### 中文

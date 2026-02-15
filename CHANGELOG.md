@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.11] - 2026-02-15
+
+### 中文
+
+#### Added
+
+- 新增按接口维度的请求历史记录，支持快速回填与清空
+
+### English
+
+#### Added
+
+- Added per-endpoint request history with quick restore and clear actions
+
 ## [1.0.10] - 2026-02-15
 
 ### 中文

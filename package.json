@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "C# API Console",
     "description": "⚡ Lightweight API testing + one-click debug for ASP.NET Core. Test endpoints instantly with CodeLens, no tool switching.",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -81,6 +81,13 @@
                     "type": "string",
                     "default": "1.0",
                     "description": "Default API version when controller has no [ApiVersion] attribute. Set to empty string to keep placeholder unreplaced. | 控制器无 [ApiVersion] 特性时的默认版本。留空则不替换占位符。"
+                },
+                "csharpApiConsole.requestHistoryLimit": {
+                    "type": "number",
+                    "default": 10,
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Max request history items kept per endpoint. | 每个接口保留的历史请求条数上限。"
                 }
             }
         }

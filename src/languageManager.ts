@@ -84,6 +84,9 @@ const TEXT_MAP = {
         'webview.baseUrl.add': '+ 添加 Base URL',
         'webview.baseUrl.empty': '暂无 Base URL，点击"+ 添加 Base URL"添加一个',
         'webview.baseUrl.saved': 'Base URLs 已保存',
+        'webview.history.placeholder': '历史记录',
+        'webview.history.clear': '清空',
+        'webview.history.cleared': '该接口历史记录已清空',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',
@@ -165,6 +168,9 @@ const TEXT_MAP = {
         'webview.baseUrl.add': '+ Add Base URL',
         'webview.baseUrl.empty': 'No Base URLs yet. Click "+ Add Base URL" to add one.',
         'webview.baseUrl.saved': 'Base URLs saved',
+        'webview.history.placeholder': 'Request History',
+        'webview.history.clear': 'Clear',
+        'webview.history.cleared': 'Endpoint history cleared',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',

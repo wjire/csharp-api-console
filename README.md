@@ -22,6 +22,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/binary.png)
 
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/history.png)
+
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlSelect.png)
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/baseUrlManage.png)
@@ -91,6 +93,14 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 所有自定义 Base URL 均基于项目，同一项目的不同 API 无需重复设置  
   Base URL settings are project-scoped and shared across APIs in the same project.
 
+### 🕘 **请求历史记录** | Request History
+
+- 按接口保存最近请求（可配置条数），支持一键回填 Body / Query 并快速重测  
+  Stores recent requests per endpoint (configurable limit), supports one-click Body/Query restore for quick retesting
+
+- 不保存敏感信息，仅保留轻量历史数据（状态码、时间、Query、Body）  
+  Sensitive data is not persisted; only lightweight history data is kept (status, time, query, body)
+
 ## ⚙️ 配置 | Configuration
 
 在 VS Code 设置中搜索 `C# API Console`:  
@@ -109,6 +119,14 @@ Search for `C# API Console` in VS Code settings:
 - **说明 | Description**:  
   控制器无 `[ApiVersion]` 特性时的默认版本。留空则不替换占位符。  
   Default API version when controller has no `[ApiVersion]` attribute. Leave empty to keep placeholder.
+
+### `csharpApiConsole.requestHistoryLimit`
+- **类型 | Type**: `number`
+- **默认值 | Default**: `10`
+- **范围 | Range**: `1 - 20`
+- **说明 | Description**:  
+  每个接口保留的历史请求条数上限。  
+  Maximum number of request history entries kept per endpoint.
 
 ---
 
@@ -142,9 +160,6 @@ Search for `C# API Console` in VS Code settings:
 
 - [ ] **参数 Mock**：支持为 Query、Body 等参数配置 Mock 数据，快速生成测试场景
 - [ ] **Parameters Mock**: Support configuring mock data for Query, Body parameters to quickly generate test scenarios
-
-- [ ] **请求历史记录**：保存最近的请求历史，方便快速重复测试
-- [ ] **Request History**: Save recent request history for quick repeated testing
 
 ---
 

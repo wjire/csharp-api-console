@@ -5,6 +5,7 @@ import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
 import { HttpClient } from './services/httpClient';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
+import { RequestHistoryStore, RequestHistoryItem } from './services/requestHistoryStore';
 import { lang } from './languageManager';
 import { LaunchSettingsReader } from './launchSettingsReader';
 
@@ -21,8 +22,10 @@ export class ApiConsolePanel {
     private readonly projectConfigCache: ProjectConfigCache;
     private readonly httpClient: HttpClient;
     private readonly baseUrlConfigManager: BaseUrlConfigManager;
+    private readonly requestHistoryStore: RequestHistoryStore;
     private readonly context: vscode.ExtensionContext;
     private currentProjectPath: string = '';
+    private currentApiEndpoint: ApiEndpoint | null = null;
     private static readonly DEBUG_SESSION_PREFIX = 'C# API Console';
     private static readonly runningProjectPaths = new Set<string>();
     private static readonly openPanels = new Set<ApiConsolePanel>();
@@ -110,6 +113,7 @@ export class ApiConsolePanel {
         this.projectConfigCache = projectConfigCache;
         this.httpClient = new HttpClient();
         this.baseUrlConfigManager = baseUrlConfigManager;
+        this.requestHistoryStore = new RequestHistoryStore(context);
         this.context = context;
         ApiConsolePanel.openPanels.add(this);
 
@@ -141,6 +145,7 @@ export class ApiConsolePanel {
 
                     // 保存当前项目路径
                     this.currentProjectPath = this.pendingApiEndpoint.projectPath || '';
+                    this.currentApiEndpoint = { ...this.pendingApiEndpoint };
 
                     // 发送初始化数据
                     this.panel.webview.postMessage({
@@ -156,6 +161,9 @@ export class ApiConsolePanel {
 
                     // 主动发送 Base URLs（确保 currentProjectPath 已设置）
                     await this.loadBaseUrls();
+
+                    // 加载当前接口历史记录
+                    await this.loadRequestHistory();
 
                     // 同步当前项目调试状态
                     this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
@@ -174,6 +182,9 @@ export class ApiConsolePanel {
                 break;
             case 'startDebug':
                 await this.startDebugSession();
+                break;
+            case 'clearRequestHistory':
+                await this.clearRequestHistory();
                 break;
         }
     }
@@ -309,6 +320,8 @@ export class ApiConsolePanel {
         url: string;
         headers: Record<string, string>;
         body?: string;
+        path?: string;
+        query?: string;
         bodyMode?: 'json' | 'formdata' | 'binary';
         binaryBodyBase64?: string;
         binaryContentType?: string;
@@ -325,10 +338,187 @@ export class ApiConsolePanel {
         // 使用 HttpClient 服务发送请求
         const response = await this.httpClient.sendRequest(requestData);
 
+        await this.saveRequestHistory(requestData, response);
+
         // 发送响应到 WebView
         this.panel.webview.postMessage({
             type: 'requestComplete',
             data: response
+        });
+
+        await this.loadRequestHistory();
+    }
+
+    private getHistoryLimit(): number {
+        const configuredLimit = vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<number>('requestHistoryLimit', 10);
+
+        if (!Number.isFinite(configuredLimit)) {
+            return 10;
+        }
+
+        return Math.min(20, Math.max(1, Math.floor(configuredLimit)));
+    }
+
+    private getCurrentEndpointKey(fallbackMethod?: string): string | null {
+        if (this.currentApiEndpoint) {
+            const projectPath = this.currentApiEndpoint.projectPath
+                ? ApiConsolePanel.normalizeProjectPath(this.currentApiEndpoint.projectPath)
+                : '';
+            return `${projectPath}|${this.currentApiEndpoint.httpMethod}|${this.currentApiEndpoint.routeTemplate}`;
+        }
+
+        if (!fallbackMethod) {
+            return null;
+        }
+
+        return `fallback|${fallbackMethod.toUpperCase()}`;
+    }
+
+    private extractPathAndQuery(url: string, pathFromRequest?: string, queryFromRequest?: string): { path: string; query: string } {
+        const fallbackPath = pathFromRequest && pathFromRequest.trim().length > 0
+            ? pathFromRequest.trim()
+            : '/';
+        const fallbackQuery = queryFromRequest?.trim() || '';
+
+        try {
+            const parsedUrl = new URL(url);
+            const query = parsedUrl.search ? parsedUrl.search.substring(1) : fallbackQuery;
+            return {
+                path: fallbackPath || parsedUrl.pathname || '/',
+                query
+            };
+        } catch {
+            return {
+                path: fallbackPath,
+                query: fallbackQuery
+            };
+        }
+    }
+
+    private sanitizeQuery(query: string): string {
+        if (!query) {
+            return '';
+        }
+
+        const sensitiveKeyPattern = /^(authorization|cookie|set-cookie|token)$/i;
+
+        try {
+            const params = new URLSearchParams(query);
+            const sanitized = new URLSearchParams();
+
+            params.forEach((value, key) => {
+                if (sensitiveKeyPattern.test(key)) {
+                    sanitized.append(key, '***');
+                } else {
+                    sanitized.append(key, value);
+                }
+            });
+
+            return sanitized.toString();
+        } catch {
+            return query;
+        }
+    }
+
+    private sanitizeBody(body: string): string {
+        if (!body) {
+            return '';
+        }
+
+        const sensitiveKeyPattern = /token/i;
+
+        try {
+            const parsed = JSON.parse(body);
+            const sanitizeObject = (value: unknown): unknown => {
+                if (Array.isArray(value)) {
+                    return value.map(item => sanitizeObject(item));
+                }
+
+                if (value && typeof value === 'object') {
+                    const record = value as Record<string, unknown>;
+                    const next: Record<string, unknown> = {};
+                    Object.entries(record).forEach(([key, innerValue]) => {
+                        next[key] = sensitiveKeyPattern.test(key)
+                            ? '***'
+                            : sanitizeObject(innerValue);
+                    });
+                    return next;
+                }
+
+                return value;
+            };
+
+            return JSON.stringify(sanitizeObject(parsed), null, 2);
+        } catch {
+            return body.replace(/("[^"]*token[^"]*"\s*:\s*")([^"]*)(")/ig, '$1***$3');
+        }
+    }
+
+    private async saveRequestHistory(
+        requestData: {
+            method: string;
+            url: string;
+            body?: string;
+            path?: string;
+            query?: string;
+        },
+        response: {
+            statusCode?: number;
+        }
+    ): Promise<void> {
+        const { query: rawQuery } = this.extractPathAndQuery(
+            requestData.url,
+            requestData.path,
+            requestData.query
+        );
+        const endpointKey = this.getCurrentEndpointKey(requestData.method);
+        if (!endpointKey) {
+            return;
+        }
+
+        const query = this.sanitizeQuery(rawQuery);
+        const body = this.sanitizeBody(requestData.body || '');
+
+        const item: RequestHistoryItem = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            query,
+            body,
+            timestamp: Date.now(),
+            statusCode: typeof response.statusCode === 'number' ? response.statusCode : null
+        };
+
+        await this.requestHistoryStore.addHistory(endpointKey, item, this.getHistoryLimit());
+    }
+
+    private async loadRequestHistory(): Promise<void> {
+        const endpointKey = this.getCurrentEndpointKey();
+        if (!endpointKey) {
+            this.panel.webview.postMessage({
+                type: 'requestHistoryLoaded',
+                data: []
+            });
+            return;
+        }
+
+        const history = this.requestHistoryStore.getHistory(endpointKey);
+        this.panel.webview.postMessage({
+            type: 'requestHistoryLoaded',
+            data: history
+        });
+    }
+
+    private async clearRequestHistory(): Promise<void> {
+        const endpointKey = this.getCurrentEndpointKey();
+        if (!endpointKey) {
+            return;
+        }
+
+        await this.requestHistoryStore.clearEndpointHistory(endpointKey);
+        this.panel.webview.postMessage({
+            type: 'requestHistoryLoaded',
+            data: []
         });
     }
 

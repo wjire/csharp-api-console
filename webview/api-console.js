@@ -18,12 +18,29 @@
     let currentBodyMode = 'json';
     let baseUrlMeasureCanvas = null;
     let currentDebugState = 'idle';
+    let requestHistory = [];
 
     function getBodyModePanelId(mode) {
         if (mode === 'formdata') {
             return 'bodyModeFormData';
         }
         return `bodyMode${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
+    }
+
+    function activateBodyMode(mode) {
+        currentBodyMode = mode;
+
+        document.querySelectorAll('.body-mode-tab').forEach(t => t.classList.remove('active'));
+        const selectedTab = document.querySelector(`.body-mode-tab[data-body-mode="${mode}"]`);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+
+        document.querySelectorAll('.body-mode-panel').forEach(p => p.classList.remove('active'));
+        const panel = document.getElementById(getBodyModePanelId(mode));
+        if (panel) {
+            panel.classList.add('active');
+        }
     }
 
     // 通知扩展 WebView 已准备好
@@ -252,6 +269,104 @@
         }, 3000);
     }
 
+    function formatHistoryTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) {
+            return '-';
+        }
+
+        const now = new Date();
+        const sameDay = date.getFullYear() === now.getFullYear()
+            && date.getMonth() === now.getMonth()
+            && date.getDate() === now.getDate();
+
+        const pad = (value) => String(value).padStart(2, '0');
+        const timePart = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+        if (sameDay) {
+            return timePart;
+        }
+
+        return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${timePart}`;
+    }
+
+    function formatHistoryStatus(statusCode) {
+        const rawStatus = statusCode === null || statusCode === undefined ? '--' : String(statusCode);
+        return rawStatus.padStart(3, '\u00A0');
+    }
+
+    function formatJsonBodyIfPossible(bodyText) {
+        if (!bodyText || typeof bodyText !== 'string') {
+            return '';
+        }
+
+        const trimmed = bodyText.trim();
+        if (!trimmed) {
+            return '';
+        }
+
+        try {
+            const parsed = JSON.parse(trimmed);
+            return JSON.stringify(parsed, null, 2);
+        } catch {
+            return bodyText;
+        }
+    }
+
+    function renderRequestHistory() {
+        const historySelect = document.getElementById('historySelect');
+        const clearButton = document.getElementById('clearHistoryBtn');
+
+        if (!historySelect || !clearButton) {
+            return;
+        }
+
+        const previousValue = historySelect.value;
+        historySelect.innerHTML = '';
+
+        const placeholderOption = document.createElement('option');
+        placeholderOption.value = '';
+        placeholderOption.textContent = t('history.placeholder') || 'Request History';
+        historySelect.appendChild(placeholderOption);
+
+        requestHistory.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            const statusCode = formatHistoryStatus(item.statusCode);
+            option.textContent = `[${statusCode}] ${formatHistoryTimestamp(item.timestamp)}`;
+            historySelect.appendChild(option);
+        });
+
+        const hasPrevious = requestHistory.some(item => item.id === previousValue);
+        historySelect.value = hasPrevious ? previousValue : '';
+
+        clearButton.disabled = requestHistory.length === 0;
+    }
+
+    function applyHistoryRecord(record) {
+        if (!record) {
+            return;
+        }
+
+        const queryStringInput = document.getElementById('queryStringInput');
+        const bodyEditor = document.getElementById('bodyEditor');
+        const queryList = document.getElementById('queryList');
+
+        if (queryStringInput) {
+            queryStringInput.value = record.query || '';
+        }
+
+        if (queryList) {
+            queryList.innerHTML = '';
+        }
+
+        if (bodyEditor) {
+            bodyEditor.value = formatJsonBodyIfPossible(record.body || '');
+        }
+
+        activateBodyMode('json');
+    }
+
 
 
     // Get current selected base URL
@@ -272,6 +387,25 @@
     document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
     document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
     document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
+    document.getElementById('historySelect')?.addEventListener('change', () => {
+        const historySelect = document.getElementById('historySelect');
+        const selectedId = historySelect?.value;
+
+        if (!selectedId) {
+            return;
+        }
+
+        const selectedRecord = requestHistory.find(item => item.id === selectedId);
+        if (selectedRecord) {
+            applyHistoryRecord(selectedRecord);
+        }
+    });
+
+    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
+        vscode.postMessage({
+            type: 'clearRequestHistory'
+        });
+    });
 
     document.getElementById('headersList')?.addEventListener('click', (e) => {
         const target = e.target;
@@ -356,16 +490,7 @@
                 return;
             }
 
-            currentBodyMode = mode;
-
-            document.querySelectorAll('.body-mode-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            document.querySelectorAll('.body-mode-panel').forEach(p => p.classList.remove('active'));
-            const panel = document.getElementById(getBodyModePanelId(mode));
-            if (panel) {
-                panel.classList.add('active');
-            }
+            activateBodyMode(mode);
         });
     });
 
@@ -695,6 +820,9 @@
         }
 
         let finalUrl = url;
+        const historyQuery = queryStringInput
+            ? (queryStringInput.startsWith('?') ? queryStringInput.substring(1) : queryStringInput)
+            : queryParams.join('&');
         if (queryParams.length > 0) {
             const separator = url.includes('?') ? '&' : '?';
             finalUrl = url + separator + queryParams.join('&');
@@ -742,6 +870,8 @@
                 url: finalUrl,
                 headers,
                 body,
+                path: route,
+                query: historyQuery,
                 bodyMode,
                 binaryBodyBase64,
                 binaryContentType,
@@ -759,6 +889,7 @@
         document.getElementById('addHeaderBtn').textContent = t('add');
         document.getElementById('addQueryBtn').textContent = t('add');
         document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
+        document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
 
         // Update tab texts
         document.querySelectorAll('.tab').forEach(tab => {
@@ -876,6 +1007,8 @@
 
         // Update auth type button
         document.querySelector('[data-auth-type="bearer"]').textContent = t('auth.bearer');
+
+        renderRequestHistory();
     }
 
     // Handle messages from extension
@@ -900,6 +1033,10 @@
                 savedBaseUrls = message.data || [];
                 renderBaseUrls();
                 break;
+            case 'requestHistoryLoaded':
+                requestHistory = Array.isArray(message.data) ? message.data : [];
+                renderRequestHistory();
+                break;
             case 'debugStatus': {
                 const debugStatus = message.data?.status;
                 if (debugStatus === 'idle' || debugStatus === 'starting' || debugStatus === 'running' || debugStatus === 'error') {
@@ -921,6 +1058,8 @@
         currentApiEndpoint = apiEndpoint;
         currentDebugState = 'idle';
         updateDebugButton();
+        requestHistory = [];
+        renderRequestHistory();
 
         // Update HTTP method and URL
         const methodElement = document.getElementById('httpMethod');

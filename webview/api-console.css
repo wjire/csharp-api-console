@@ -97,6 +97,38 @@ body {
     flex-wrap: nowrap;
 }
 
+.history-section {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: 8px;
+    flex: 0 0 auto;
+}
+
+.history-select {
+    width: 220px;
+    min-width: 160px;
+    max-width: 260px;
+    padding: 10px 10px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+    font-family: var(--vscode-editor-font-family);
+    line-height: 1.5;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+.history-section .remove-button {
+    padding: 6px 10px;
+}
+
+.history-section .remove-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .base-url-container {
     display: flex;
     flex: 0 1 auto;

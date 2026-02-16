@@ -111,6 +111,18 @@ Search for `C# API Console` in VS Code settings:
   CodeLens 扫描防抖延迟（毫秒）。设置为 0 禁用防抖。  
   CodeLens scanning debounce delay in milliseconds. Set to 0 to disable.
 
+### `csharpApiConsole.codeLensCacheTtlSeconds`
+- **Default**: `120`
+- **Range**: `0 - 3600`
+  CodeLens 缓存过期时间（秒），自上次访问起超过该时长将失效。设置为 0 表示不启用 TTL。  
+  CodeLens cache TTL in seconds. Entries expire after this duration since last access. Set to 0 to disable TTL.
+
+### `csharpApiConsole.codeLensCacheMaxEntries`
+- **Default**: `100`
+- **Range**: `1 - 200`
+  CodeLens 缓存最大条目数（按文档/控制器文件计，不是按单个 CodeLens 按钮计），超过后优先淘汰最近最少使用（LRU）的条目。  
+  Maximum CodeLens cache entries (counted per document/controller file, not per individual CodeLens item). When exceeded, least recently used (LRU) entries are evicted first.
+
 ### `csharpApiConsole.defaultApiVersion`
 - **Default**: `"1.0"`
   控制器无 `[ApiVersion]` 特性时的默认版本。留空则不替换占位符。  
@@ -121,6 +133,16 @@ Search for `C# API Console` in VS Code settings:
 - **Range**: `1 - 20`
   每个接口保留的历史请求条数上限。  
   Maximum number of request history entries kept per endpoint.
+
+### `csharpApiConsole.requestHistoryEnabled`
+- **Default**: `true`
+  是否启用请求历史记录的保存与加载。  
+  Enable request history persistence and loading.
+
+### `csharpApiConsole.requestHistoryTtlDays`
+- **Default**: `3`
+  请求历史 TTL（天）。加载历史时会自动清理超时记录。设置为 `<= 0` 表示永久保留。  
+  Request history TTL in days. Expired entries are auto-removed when loading history. Set `<= 0` to keep forever.
 
 ### `csharpApiConsole.requestTimeoutSeconds`
 - **Default**: `30`

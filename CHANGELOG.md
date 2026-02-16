@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.15] - 2026-02-16
+
+### 中文
+
+#### Added
+
+- CodeLens 缓存新增 TTL 与 LRU 上限策略，支持通过配置项控制，配置项：`csharpApiConsole.codeLensCacheTtlSeconds`、`csharpApiConsole.codeLensCacheMaxEntries`
+- 请求历史新增 TTL 过期清理策略（默认 3 天，`<=0` 永久保留），配置项：`csharpApiConsole.requestHistoryEnabled`、`csharpApiConsole.requestHistoryTtlDays`
+
+### English
+
+#### Added
+
+- Added TTL and LRU-capacity strategies for CodeLens cache, configurable via settings, settings: `csharpApiConsole.codeLensCacheTtlSeconds`, `csharpApiConsole.codeLensCacheMaxEntries`
+- Added TTL-based cleanup for request history (default 3 days, `<=0` keeps forever), settings: `csharpApiConsole.requestHistoryEnabled`, `csharpApiConsole.requestHistoryTtlDays`
+
 ## [1.0.14] - 2026-02-15
 
 ### 中文

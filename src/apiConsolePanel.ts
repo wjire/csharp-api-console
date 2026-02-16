@@ -410,6 +410,12 @@ export class ApiConsolePanel {
         return Math.floor(maxBodyKb * 1024);
     }
 
+    private isRequestHistoryEnabled(): boolean {
+        return vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<boolean>('requestHistoryEnabled', true);
+    }
+
     private getCurrentEndpointKey(fallbackMethod?: string): string | null {
         if (this.currentApiEndpoint) {
             const projectPath = this.currentApiEndpoint.projectPath
@@ -517,6 +523,10 @@ export class ApiConsolePanel {
             statusCode?: number;
         }
     ): Promise<void> {
+        if (!this.isRequestHistoryEnabled()) {
+            return;
+        }
+
         const { query: rawQuery } = this.extractPathAndQuery(
             requestData.url,
             requestData.path,
@@ -546,6 +556,14 @@ export class ApiConsolePanel {
     }
 
     private async loadRequestHistory(): Promise<void> {
+        if (!this.isRequestHistoryEnabled()) {
+            this.panel.webview.postMessage({
+                type: 'requestHistoryLoaded',
+                data: []
+            });
+            return;
+        }
+
         const endpointKey = this.getCurrentEndpointKey();
         if (!endpointKey) {
             this.panel.webview.postMessage({
@@ -555,7 +573,7 @@ export class ApiConsolePanel {
             return;
         }
 
-        const history = this.requestHistoryStore.getHistory(endpointKey);
+        const history = await this.requestHistoryStore.getHistory(endpointKey);
         this.panel.webview.postMessage({
             type: 'requestHistoryLoaded',
             data: history
@@ -563,6 +581,14 @@ export class ApiConsolePanel {
     }
 
     private async clearRequestHistory(): Promise<void> {
+        if (!this.isRequestHistoryEnabled()) {
+            this.panel.webview.postMessage({
+                type: 'requestHistoryLoaded',
+                data: []
+            });
+            return;
+        }
+
         const endpointKey = this.getCurrentEndpointKey();
         if (!endpointKey) {
             return;

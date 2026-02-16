@@ -106,9 +106,9 @@ body {
 }
 
 .history-select {
-    width: 220px;
-    min-width: 160px;
-    max-width: 260px;
+    /* width: 220px; */
+    /* min-width: 160px;
+    max-width: 260px; */
     padding: 10px 10px;
     background-color: var(--vscode-input-background);
     color: var(--vscode-input-foreground);

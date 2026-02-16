@@ -1,0 +1,17 @@
+{
+    "extension.displayName": "C# API Console",
+    "extension.description": "⚡ 面向 ASP.NET Core 的轻量 API 测试 + 一键调试。通过 CodeLens 即时测试接口，无需工具切换。",
+    "command.testEndpoint.title": "⚡ 测试接口",
+    "configuration.title": "C# API Console",
+    "configuration.codeLensDebounceDelay.description": "CodeLens 扫描防抖延迟（毫秒），避免输入时频繁扫描。（0 = 禁用防抖）",
+    "configuration.codeLensCacheTtlSeconds.description": "CodeLens 缓存过期时间（秒），自上次访问起超过该时长将失效。（0 = 不启用 TTL）",
+    "configuration.codeLensCacheMaxEntries.description": "CodeLens 缓存最大条目数（按文档/控制器文件计），超过后优先淘汰最近最少使用（LRU）的条目。",
+    "configuration.defaultApiVersion.description": "控制器无 [ApiVersion] 特性时的默认版本。留空则不替换占位符。",
+    "configuration.requestHistoryLimit.description": "每个接口保留的历史请求条数上限。",
+    "configuration.requestHistoryEnabled.description": "是否启用请求历史记录的保存与加载。",
+    "configuration.requestHistoryTtlDays.description": "请求历史 TTL（天）。加载历史时会自动清理超时记录。（<=0 表示永久保留）",
+    "configuration.requestTimeoutSeconds.description": "HTTP 请求超时时间（秒）。",
+    "configuration.largeResponseThresholdKb.description": "大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。",
+    "configuration.maxResponseLineNumbers.description": "UI 中最多渲染的响应行号数量。",
+    "configuration.requestHistoryMaxBodyKb.description": "请求历史中可保存的 Body 最大大小（KB），超过后将保存为空。"
+}

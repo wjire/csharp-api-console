@@ -1,0 +1,17 @@
+{
+    "extension.displayName": "C# API Console",
+    "extension.description": "⚡ Lightweight API testing + one-click debug for ASP.NET Core. Test endpoints instantly with CodeLens, no tool switching.",
+    "command.testEndpoint.title": "⚡ Test Endpoint",
+    "configuration.title": "C# API Console",
+    "configuration.codeLensDebounceDelay.description": "CodeLens scanning debounce delay in milliseconds. Prevents excessive rescanning when typing quickly. (0 = no debounce)",
+    "configuration.codeLensCacheTtlSeconds.description": "CodeLens cache TTL in seconds. Entries expire after this duration since last access. (0 = no TTL)",
+    "configuration.codeLensCacheMaxEntries.description": "Maximum CodeLens cache entries (per document/controller file). When exceeded, least recently used entries are evicted first.",
+    "configuration.defaultApiVersion.description": "Default API version when controller has no [ApiVersion] attribute. Set to empty string to keep placeholder unreplaced.",
+    "configuration.requestHistoryLimit.description": "Max request history items kept per endpoint.",
+    "configuration.requestHistoryEnabled.description": "Enable request history persistence and loading.",
+    "configuration.requestHistoryTtlDays.description": "Request history TTL in days. Expired entries are auto-removed when loading history. (<=0 = keep forever)",
+    "configuration.requestTimeoutSeconds.description": "HTTP request timeout in seconds.",
+    "configuration.largeResponseThresholdKb.description": "Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.",
+    "configuration.maxResponseLineNumbers.description": "Maximum response line numbers rendered in the UI.",
+    "configuration.requestHistoryMaxBodyKb.description": "Maximum request body size in KB to persist in request history. Bodies larger than this are stored as empty."
+}

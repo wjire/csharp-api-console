@@ -57,6 +57,9 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 智能处理 `[controller]`, `[action]` 占位符  
   Handles `[controller]` and `[action]` placeholders intelligently
 
+- 支持路由参数占位符（如 `order/{id}`）：发送请求时自动替换为用户输入值  
+  Supports route parameter placeholders (e.g. `order/{id}`): automatically replaces them with user-provided values when sending requests
+
 - 支持 `[ApiVersion]` 特性和自定义默认版本  
   Supports the `[ApiVersion]` attribute with a configurable default version
 

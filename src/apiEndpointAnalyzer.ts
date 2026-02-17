@@ -85,7 +85,7 @@ export class ApiEndpointAnalyzer {
         // 不在扫描时查找项目文件和读取配置，而是在用户点击时才加载
         // 这样可以大幅减少文件 I/O 操作，提升扫描速度
 
-        const autoQueryParamNames = this.extractAutoQueryParamNames(lines, methodLine, fullRoute);
+        const autoQueryParamNames = this.extractAutoQueryParamNames(lines, methodLine);
 
         return {
             httpMethod: httpMethod as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'ANY',
@@ -217,7 +217,7 @@ export class ApiEndpointAnalyzer {
         return { controllerName, controllerRoute };
     }
 
-    private extractAutoQueryParamNames(lines: string[], methodLine: number, fullRoute: string): string[] {
+    private extractAutoQueryParamNames(lines: string[], methodLine: number): string[] {
         const signature = this.extractMethodSignature(lines, methodLine);
         if (!signature) {
             return [];
@@ -227,8 +227,6 @@ export class ApiEndpointAnalyzer {
         if (!parameterSection) {
             return [];
         }
-
-        const routeParamNames = this.extractRouteParamNames(fullRoute);
         const result: string[] = [];
 
         for (const rawParameter of this.splitParameters(parameterSection)) {
@@ -242,10 +240,6 @@ export class ApiEndpointAnalyzer {
             }
 
             if (parsed.source === 'body' || parsed.source === 'route' || parsed.source === 'header' || parsed.source === 'services' || parsed.source === 'form') {
-                continue;
-            }
-
-            if (routeParamNames.has(parsed.name.toLowerCase())) {
                 continue;
             }
 
@@ -413,28 +407,6 @@ export class ApiEndpointAnalyzer {
         }
 
         return ApiEndpointAnalyzer.primitiveTypeNames.has(normalized);
-    }
-
-    private extractRouteParamNames(routeTemplate: string): Set<string> {
-        const names = new Set<string>();
-        const regex = /\{([^}]+)\}/g;
-        let match: RegExpExecArray | null = null;
-
-        while ((match = regex.exec(routeTemplate)) !== null) {
-            const rawName = match[1].trim();
-            if (!rawName) {
-                continue;
-            }
-
-            const routeName = rawName.split(':')[0].split('=')[0].replace(/^\*/, '').trim();
-            if (!routeName) {
-                continue;
-            }
-
-            names.add(routeName.toLowerCase());
-        }
-
-        return names;
     }
 
     /**

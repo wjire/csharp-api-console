@@ -774,7 +774,7 @@
         row.innerHTML = `
                 <input type="text" class="param-input" placeholder="${t('placeholder.key')}" />
                 <input type="text" class="param-input" placeholder="${t('placeholder.value')}" />
-                <button class="remove-button" type="button">${t('remove')}</button>
+                <button class="remove-button" type="button">${t('remove') || ''}</button>
             `;
         list.appendChild(row);
     }
@@ -787,7 +787,7 @@
         row.innerHTML = `
                 <input type="text" class="param-input" placeholder="${t('placeholder.key')}" />
                 <input type="text" class="param-input" placeholder="${t('placeholder.value')}" />
-                <button class="remove-button" type="button">${t('remove')}</button>
+                <button class="remove-button" type="button">${t('remove') || ''}</button>
             `;
         list.appendChild(row);
         return row;
@@ -799,6 +799,50 @@
         if (keyInput) {
             keyInput.value = key;
         }
+    }
+
+    function extractRouteParamName(placeholderContent) {
+        const raw = String(placeholderContent || '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        return raw
+            .split(':')[0]
+            .split('=')[0]
+            .replace(/^\*/, '')
+            .trim();
+    }
+
+    function replaceRoutePlaceholders(route, queryEntries) {
+        const consumedIndexes = new Set();
+        const safeRoute = String(route || '');
+
+        const replacedRoute = safeRoute.replace(/\{([^}]+)\}/g, (match, placeholderContent) => {
+            const routeParamName = extractRouteParamName(placeholderContent);
+            if (!routeParamName) {
+                return match;
+            }
+
+            const routeParamLower = routeParamName.toLowerCase();
+            for (let index = 0; index < queryEntries.length; index += 1) {
+                if (consumedIndexes.has(index)) {
+                    continue;
+                }
+
+                const entry = queryEntries[index];
+                if ((entry.key || '').toLowerCase() !== routeParamLower) {
+                    continue;
+                }
+
+                consumedIndexes.add(index);
+                return encodeURIComponent(entry.value || '');
+            }
+
+            return match;
+        });
+
+        return { replacedRoute, consumedIndexes };
     }
 
     // Send request
@@ -816,7 +860,6 @@
         const method = currentApiEndpoint.httpMethod;
         const baseUrl = getCurrentBaseUrl();
         const route = document.getElementById('routeInput').value;
-        const url = baseUrl + route;
         const token = document.getElementById('tokenInput').value;
 
         // Collect headers
@@ -843,7 +886,7 @@
 
         // Collect query parameters and append to URL
         // Priority: query string input > manual parameter list
-        const queryParams = [];
+        const queryEntries = [];
         const queryStringInput = document.getElementById('queryStringInput').value.trim();
 
         if (queryStringInput) {
@@ -851,7 +894,7 @@
             const cleanString = queryStringInput.startsWith('?') ? queryStringInput.substring(1) : queryStringInput;
             const params = new URLSearchParams(cleanString);
             params.forEach((value, key) => {
-                queryParams.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                queryEntries.push({ key, value });
             });
         } else {
             // Use manual parameter list (fallback)
@@ -860,15 +903,25 @@
                 const key = inputs[0].value.trim();
                 const value = inputs[1].value.trim();
                 if (key) {
-                    queryParams.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+                    queryEntries.push({ key, value });
                 }
             });
         }
 
+        const { replacedRoute, consumedIndexes } = replaceRoutePlaceholders(route, queryEntries);
+        const url = baseUrl + replacedRoute;
+
+        const queryParams = [];
+        queryEntries.forEach((entry, index) => {
+            if (consumedIndexes.has(index)) {
+                return;
+            }
+
+            queryParams.push(encodeURIComponent(entry.key) + '=' + encodeURIComponent(entry.value));
+        });
+
         let finalUrl = url;
-        const historyQuery = queryStringInput
-            ? (queryStringInput.startsWith('?') ? queryStringInput.substring(1) : queryStringInput)
-            : queryParams.join('&');
+        const historyQuery = queryParams.join('&');
         if (queryParams.length > 0) {
             const separator = url.includes('?') ? '&' : '?';
             finalUrl = url + separator + queryParams.join('&');
@@ -916,7 +969,7 @@
                 url: finalUrl,
                 headers,
                 body,
-                path: route,
+                path: replacedRoute,
                 query: historyQuery,
                 bodyMode,
                 binaryBodyBase64,
@@ -937,6 +990,11 @@
         document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
         document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
+
+        // Update existing dynamic row action buttons (rows may be created before i18n arrives)
+        document.querySelectorAll('#headersList .remove-button, #queryList .remove-button').forEach(btn => {
+            btn.textContent = t('remove');
+        });
 
         // Update tab texts
         document.querySelectorAll('.tab').forEach(tab => {

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.17] - 2026-02-17
+
+### 中文
+
+#### Added
+
+- 新增路由占位符场景支持（如 `order/{id}`）：点击 CodeLens 自动切换到 Query 标签并预填参数
+- 发送请求时自动将路由中的占位符替换为用户输入值，避免占位符未替换导致调试/请求失败
+
+### English
+
+#### Added
+
+- Added support for route-placeholder scenarios (e.g. `order/{id}`): clicking CodeLens now auto-switches to Query and pre-fills parameters
+- Automatically replaces route placeholders with user input when sending requests, preventing debug/request failures caused by unresolved placeholders
+
 ## [1.0.16] - 2026-02-17
 
 ### 中文

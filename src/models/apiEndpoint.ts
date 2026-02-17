@@ -22,4 +22,8 @@ export interface ApiEndpoint {
      * 自动填充到 Query 标签的参数名（仅基元类型且适合作为 Query 参数）
      */
     autoQueryParamNames?: string[];
+    /**
+     * 面板初始化时推荐激活的 Body 模式
+     */
+    preferredBodyMode?: 'json' | 'formdata' | 'binary';
 }

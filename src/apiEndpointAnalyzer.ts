@@ -86,6 +86,7 @@ export class ApiEndpointAnalyzer {
         // 这样可以大幅减少文件 I/O 操作，提升扫描速度
 
         const autoQueryParamNames = this.extractAutoQueryParamNames(lines, methodLine);
+        const preferredBodyMode = this.detectPreferredBodyMode(lines, methodLine);
 
         return {
             httpMethod: httpMethod as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'ANY',
@@ -95,7 +96,8 @@ export class ApiEndpointAnalyzer {
             filePath: document.uri.fsPath,
             lineNumber: methodLine + 1,
             projectPath: await ApiEndpointAnalyzer.findProjectFile(document.uri.fsPath),
-            autoQueryParamNames: autoQueryParamNames.length > 0 ? autoQueryParamNames : undefined
+            autoQueryParamNames: autoQueryParamNames.length > 0 ? autoQueryParamNames : undefined,
+            preferredBodyMode
         };
     }
 
@@ -407,6 +409,80 @@ export class ApiEndpointAnalyzer {
         }
 
         return ApiEndpointAnalyzer.primitiveTypeNames.has(normalized);
+    }
+
+    private hasIFormFileParameter(lines: string[], methodLine: number): boolean {
+        const signature = this.extractMethodSignature(lines, methodLine);
+        if (!signature) {
+            return false;
+        }
+
+        const parameterSection = this.extractParameterSection(signature);
+        if (!parameterSection) {
+            return false;
+        }
+
+        for (const rawParameter of this.splitParameters(parameterSection)) {
+            const parsed = this.parseParameter(rawParameter);
+            if (!parsed) {
+                continue;
+            }
+
+            if (this.isIFormFileType(parsed.typeName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private hasFromFormParameter(lines: string[], methodLine: number): boolean {
+        const signature = this.extractMethodSignature(lines, methodLine);
+        if (!signature) {
+            return false;
+        }
+
+        const parameterSection = this.extractParameterSection(signature);
+        if (!parameterSection) {
+            return false;
+        }
+
+        for (const rawParameter of this.splitParameters(parameterSection)) {
+            const parsed = this.parseParameter(rawParameter);
+            if (!parsed) {
+                continue;
+            }
+
+            if (parsed.source === 'form') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private detectPreferredBodyMode(lines: string[], methodLine: number): 'json' | 'formdata' | 'binary' | undefined {
+        if (this.hasIFormFileParameter(lines, methodLine)) {
+            return 'binary';
+        }
+
+        if (this.hasFromFormParameter(lines, methodLine)) {
+            return 'formdata';
+        }
+
+        return undefined;
+    }
+
+    private isIFormFileType(typeName: string): boolean {
+        const normalized = typeName
+            .replace(/\?/g, '')
+            .replace(/^global::/i, '')
+            .replace(/\s/g, '')
+            .toLowerCase();
+
+        return normalized === 'iformfile'
+            || normalized === 'microsoft.aspnetcore.http.iformfile'
+            || normalized === 'system.web.httppostedfilebase';
     }
 
     /**

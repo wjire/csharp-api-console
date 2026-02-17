@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.18] - 2026-02-17
+
+### 中文
+
+#### Added
+
+- 新增文件上传入参识别：当 Action 包含 `IFormFile` 参数时，点击 CodeLens 自动跳转到 Body 的 Binary 模式
+- 新增表单绑定入参识别：当 Action 包含 `[FromForm]` 参数时，点击 CodeLens 自动跳转到 Body 的 FormData 模式
+
+### English
+
+#### Added
+
+- Added file-upload parameter detection: when an action contains an `IFormFile` parameter, clicking CodeLens now auto-switches to Body Binary mode
+- Added form-binding parameter detection: when an action contains a `[FromForm]` parameter, clicking CodeLens now auto-switches to Body FormData mode
+
 ## [1.0.17] - 2026-02-17
 
 ### 中文

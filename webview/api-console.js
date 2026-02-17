@@ -1214,6 +1214,12 @@
             activateMainTab('query');
             autoQueryParamNames.forEach(paramName => addQueryRowWithKey(paramName));
         }
+
+        const preferredBodyMode = apiEndpoint.preferredBodyMode;
+        if (preferredBodyMode === 'binary' || preferredBodyMode === 'formdata') {
+            activateMainTab('body');
+            activateBodyMode(preferredBodyMode);
+        }
     }
 
     // Update API endpoint (when switching between different APIs)

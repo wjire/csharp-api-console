@@ -43,6 +43,9 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 支持同时打开多个测试标签页  
   Supports opening multiple test tabs simultaneously
 
+- 智能识别基元类型 Query 入参：点击 CodeLens 自动切换到 Query 标签并预填参数键名  
+  Smart primitive Query parameter detection: clicking CodeLens automatically switches to the Query tab and pre-fills parameter keys
+
 ### ⚡ **智能路由解析** | Smart Route Resolution
 
 - 自动识别 `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpDelete]` 等特性  

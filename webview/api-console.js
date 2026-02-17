@@ -495,17 +495,27 @@
     });
 
     // Tab switching
+    function activateMainTab(tabName) {
+        if (!tabName) {
+            return;
+        }
+
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        const targetTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const targetPanel = document.getElementById(tabName + 'Tab');
+        if (targetPanel) {
+            targetPanel.classList.add('active');
+        }
+    }
+
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            const tabName = tab.dataset.tab;
-
-            // Update tab styles
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            // Update content
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tabName + 'Tab').classList.add('active');
+            activateMainTab(tab.dataset.tab);
         });
     });
 
@@ -780,6 +790,15 @@
                 <button class="remove-button" type="button">${t('remove')}</button>
             `;
         list.appendChild(row);
+        return row;
+    }
+
+    function addQueryRowWithKey(key) {
+        const row = addQueryRow();
+        const keyInput = row?.querySelectorAll('.param-input')?.[0];
+        if (keyInput) {
+            keyInput.value = key;
+        }
     }
 
     // Send request
@@ -1125,6 +1144,18 @@
 
         // Query parameters list starts empty - users can add them manually
         document.getElementById('queryList').innerHTML = '';
+
+        const autoQueryParamNames = Array.isArray(apiEndpoint.autoQueryParamNames)
+            ? apiEndpoint.autoQueryParamNames
+                .filter(name => typeof name === 'string')
+                .map(name => name.trim())
+                .filter(name => name.length > 0)
+            : [];
+
+        if (autoQueryParamNames.length > 0) {
+            activateMainTab('query');
+            autoQueryParamNames.forEach(paramName => addQueryRowWithKey(paramName));
+        }
     }
 
     // Update API endpoint (when switching between different APIs)

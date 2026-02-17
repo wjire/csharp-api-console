@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.16] - 2026-02-17
+
+### 中文
+
+#### Added
+
+- 新增基元类型 Query 入参自动识别：点击 CodeLens 自动切换到 Query 标签
+- 自动添加并预填 Query 参数键名，用户只需填写 value
+
+### English
+
+#### Added
+
+- Added primitive Query parameter auto detection: clicking CodeLens now auto-switches to the Query tab
+- Automatically adds and pre-fills Query parameter keys, so users only need to input values
+
 ## [1.0.15] - 2026-02-16
 
 ### 中文

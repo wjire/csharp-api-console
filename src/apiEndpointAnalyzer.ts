@@ -8,6 +8,28 @@ import { ApiRouteBuilder } from './apiRouteBuilder';
  */
 export class ApiEndpointAnalyzer {
     private readonly routeBuilder = new ApiRouteBuilder();
+    private static readonly primitiveTypeNames = new Set([
+        'string',
+        'bool',
+        'boolean',
+        'byte',
+        'sbyte',
+        'short',
+        'ushort',
+        'int',
+        'uint',
+        'long',
+        'ulong',
+        'float',
+        'double',
+        'decimal',
+        'char',
+        'guid',
+        'datetime',
+        'datetimeoffset',
+        'timespan',
+        'uri'
+    ]);
 
     /**
      * 从文档位置检测 API 端点
@@ -63,6 +85,8 @@ export class ApiEndpointAnalyzer {
         // 不在扫描时查找项目文件和读取配置，而是在用户点击时才加载
         // 这样可以大幅减少文件 I/O 操作，提升扫描速度
 
+        const autoQueryParamNames = this.extractAutoQueryParamNames(lines, methodLine, fullRoute);
+
         return {
             httpMethod: httpMethod as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'ANY',
             routeTemplate: fullRoute,
@@ -70,7 +94,8 @@ export class ApiEndpointAnalyzer {
             action: methodName,
             filePath: document.uri.fsPath,
             lineNumber: methodLine + 1,
-            projectPath: await ApiEndpointAnalyzer.findProjectFile(document.uri.fsPath)
+            projectPath: await ApiEndpointAnalyzer.findProjectFile(document.uri.fsPath),
+            autoQueryParamNames: autoQueryParamNames.length > 0 ? autoQueryParamNames : undefined
         };
     }
 
@@ -190,6 +215,226 @@ export class ApiEndpointAnalyzer {
         }
 
         return { controllerName, controllerRoute };
+    }
+
+    private extractAutoQueryParamNames(lines: string[], methodLine: number, fullRoute: string): string[] {
+        const signature = this.extractMethodSignature(lines, methodLine);
+        if (!signature) {
+            return [];
+        }
+
+        const parameterSection = this.extractParameterSection(signature);
+        if (!parameterSection) {
+            return [];
+        }
+
+        const routeParamNames = this.extractRouteParamNames(fullRoute);
+        const result: string[] = [];
+
+        for (const rawParameter of this.splitParameters(parameterSection)) {
+            const parsed = this.parseParameter(rawParameter);
+            if (!parsed) {
+                continue;
+            }
+
+            if (!this.isPrimitiveType(parsed.typeName)) {
+                continue;
+            }
+
+            if (parsed.source === 'body' || parsed.source === 'route' || parsed.source === 'header' || parsed.source === 'services' || parsed.source === 'form') {
+                continue;
+            }
+
+            if (routeParamNames.has(parsed.name.toLowerCase())) {
+                continue;
+            }
+
+            result.push(parsed.name);
+        }
+
+        return result;
+    }
+
+    private extractMethodSignature(lines: string[], methodLine: number): string {
+        let signature = lines[methodLine] ?? '';
+
+        if (signature.includes(')')) {
+            return signature;
+        }
+
+        for (let index = methodLine + 1; index < lines.length && index <= methodLine + 20; index++) {
+            signature += ` ${lines[index].trim()}`;
+            if (lines[index].includes(')')) {
+                break;
+            }
+        }
+
+        return signature;
+    }
+
+    private extractParameterSection(signature: string): string | null {
+        const firstParen = signature.indexOf('(');
+        if (firstParen < 0) {
+            return null;
+        }
+
+        let depth = 0;
+        for (let i = firstParen; i < signature.length; i++) {
+            const char = signature[i];
+            if (char === '(') {
+                depth += 1;
+                continue;
+            }
+
+            if (char === ')') {
+                depth -= 1;
+                if (depth === 0) {
+                    return signature.substring(firstParen + 1, i);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private splitParameters(parameterSection: string): string[] {
+        const segments: string[] = [];
+        let current = '';
+        let angleDepth = 0;
+        let parenDepth = 0;
+        let bracketDepth = 0;
+
+        for (const char of parameterSection) {
+            if (char === '<') {
+                angleDepth += 1;
+            } else if (char === '>') {
+                angleDepth = Math.max(0, angleDepth - 1);
+            } else if (char === '(') {
+                parenDepth += 1;
+            } else if (char === ')') {
+                parenDepth = Math.max(0, parenDepth - 1);
+            } else if (char === '[') {
+                bracketDepth += 1;
+            } else if (char === ']') {
+                bracketDepth = Math.max(0, bracketDepth - 1);
+            }
+
+            if (char === ',' && angleDepth === 0 && parenDepth === 0 && bracketDepth === 0) {
+                if (current.trim()) {
+                    segments.push(current.trim());
+                }
+                current = '';
+                continue;
+            }
+
+            current += char;
+        }
+
+        if (current.trim()) {
+            segments.push(current.trim());
+        }
+
+        return segments;
+    }
+
+    private parseParameter(parameter: string): { name: string; typeName: string; source: 'query' | 'body' | 'route' | 'header' | 'services' | 'form' | 'unknown' } | null {
+        if (!parameter) {
+            return null;
+        }
+
+        const withoutDefaultValue = parameter.split('=')[0].trim();
+        if (!withoutDefaultValue) {
+            return null;
+        }
+
+        const source = this.detectParameterSource(withoutDefaultValue);
+
+        let normalized = withoutDefaultValue
+            .replace(/^\s*(\[[^\]]+\]\s*)+/g, '')
+            .replace(/^\s*(?:this|ref|out|in|params)\s+/g, '')
+            .trim();
+
+        if (!normalized) {
+            return null;
+        }
+
+        const parts = normalized.split(/\s+/).filter(Boolean);
+        if (parts.length < 2) {
+            return null;
+        }
+
+        const name = parts[parts.length - 1].replace(/^@/, '').trim();
+        const typeName = parts.slice(0, -1).join(' ').trim();
+
+        if (!name || !typeName) {
+            return null;
+        }
+
+        return { name, typeName, source };
+    }
+
+    private detectParameterSource(parameter: string): 'query' | 'body' | 'route' | 'header' | 'services' | 'form' | 'unknown' {
+        const lower = parameter.toLowerCase();
+        if (lower.includes('[frombody')) {
+            return 'body';
+        }
+        if (lower.includes('[fromroute')) {
+            return 'route';
+        }
+        if (lower.includes('[fromquery')) {
+            return 'query';
+        }
+        if (lower.includes('[fromheader')) {
+            return 'header';
+        }
+        if (lower.includes('[fromservices')) {
+            return 'services';
+        }
+        if (lower.includes('[fromform')) {
+            return 'form';
+        }
+        return 'unknown';
+    }
+
+    private isPrimitiveType(typeName: string): boolean {
+        let normalized = typeName
+            .replace(/\?/g, '')
+            .replace(/^global::/i, '')
+            .replace(/^System\./i, '')
+            .replace(/\s/g, '')
+            .toLowerCase();
+
+        if (normalized.endsWith("[]")) {
+            return false;
+        }
+
+        if (normalized.startsWith('nullable<') && normalized.endsWith('>')) {
+            normalized = normalized.substring('nullable<'.length, normalized.length - 1);
+        }
+
+        return ApiEndpointAnalyzer.primitiveTypeNames.has(normalized);
+    }
+
+    private extractRouteParamNames(routeTemplate: string): Set<string> {
+        const names = new Set<string>();
+        const regex = /\{([^}]+)\}/g;
+        let match: RegExpExecArray | null = null;
+
+        while ((match = regex.exec(routeTemplate)) !== null) {
+            const rawName = match[1].trim();
+            if (!rawName) {
+                continue;
+            }
+
+            const routeName = rawName.split(':')[0].split('=')[0].replace(/^\*/, '').trim();
+            if (!routeName) {
+                continue;
+            }
+
+            names.add(routeName.toLowerCase());
+        }
+
+        return names;
     }
 
     /**

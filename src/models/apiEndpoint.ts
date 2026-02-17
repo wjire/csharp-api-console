@@ -18,4 +18,8 @@ export interface ApiEndpoint {
     lineNumber: number;
     /** 项目路径 */
     projectPath?: string;
+    /**
+     * 自动填充到 Query 标签的参数名（仅基元类型且适合作为 Query 参数）
+     */
+    autoQueryParamNames?: string[];
 }

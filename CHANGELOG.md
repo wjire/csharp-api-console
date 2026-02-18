@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.21] - 2026-02-18
+
+### 中文
+
+#### Changed
+
+- 优化浅色主题下 CSS 样式及Body(JSON) 文本选中内容的可读性
+- 改善面板布局和响应式设计
+
+### English
+
+#### Changed
+
+- Optimized CSS styling in light themes and improved readability of selected text in Body (JSON)
+- Improved panel layout and responsive design
+
 ## [1.0.20] - 2026-02-18
 
 ### 中文

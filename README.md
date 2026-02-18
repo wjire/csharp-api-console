@@ -168,6 +168,12 @@ Search for `C# API Console` in VS Code settings:
   UI 中最多渲染的响应行号数量。  
   Maximum response line numbers rendered in the UI.
 
+### `csharpApiConsole.jsonIndentSpaces`
+- **Default**: `2`
+- **Options**: `2` / `4`
+  请求格式化与响应美化时使用的 JSON 缩进空格数。  
+  JSON indentation spaces used in request formatting and response pretty-printing.
+
 ### `csharpApiConsole.requestHistoryMaxBodyKb`
 - **Default**: `32`
   请求历史中可保存的 Body 最大大小（KB），超过后将保存为空。  

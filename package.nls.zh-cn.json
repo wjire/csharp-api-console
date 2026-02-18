@@ -13,5 +13,6 @@
     "configuration.requestTimeoutSeconds.description": "HTTP 请求超时时间（秒）。（<=0 表示不设置超时）",
     "configuration.largeResponseThresholdKb.description": "大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。",
     "configuration.maxResponseLineNumbers.description": "UI 中最多渲染的响应行号数量。",
+    "configuration.jsonIndentSpaces.description": "请求格式化与响应美化时使用的 JSON 缩进空格数，仅支持 2 或 4。",
     "configuration.requestHistoryMaxBodyKb.description": "请求历史中可保存的 Body 最大大小（KB），超过后将保存为空。"
 }

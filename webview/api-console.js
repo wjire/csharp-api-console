@@ -21,6 +21,7 @@
     let requestHistory = [];
     let largeResponseThresholdBytes = 1024 * 1024;
     let maxRenderLineNumbers = 2000;
+    let jsonIndentSpaces = 2;
 
     function getBodyModePanelId(mode) {
         if (mode === 'formdata') {
@@ -314,10 +315,69 @@
 
         try {
             const parsed = JSON.parse(trimmed);
-            return JSON.stringify(parsed, null, 2);
+            return JSON.stringify(parsed, null, jsonIndentSpaces);
         } catch {
             return bodyText;
         }
+    }
+
+    function syncBodyEditorHighlightScroll() {
+        const bodyEditor = document.getElementById('bodyEditor');
+        const highlightLayer = document.querySelector('.json-editor-highlight');
+        if (!bodyEditor || !highlightLayer) {
+            return;
+        }
+
+        highlightLayer.scrollTop = bodyEditor.scrollTop;
+        highlightLayer.scrollLeft = bodyEditor.scrollLeft;
+    }
+
+    function updateBodyEditorHighlight() {
+        const bodyEditor = document.getElementById('bodyEditor');
+        const highlightCode = document.getElementById('bodyEditorHighlight');
+        if (!bodyEditor || !highlightCode) {
+            return;
+        }
+
+        const rawText = bodyEditor.value || '';
+        if (!rawText) {
+            highlightCode.innerHTML = '';
+            return;
+        }
+
+        highlightCode.innerHTML = highlightJSON(rawText);
+        syncBodyEditorHighlightScroll();
+    }
+
+    function updateJsonValidityIndicator() {
+        const bodyEditor = document.getElementById('bodyEditor');
+        const indicator = document.getElementById('jsonValidityBadge');
+        if (!bodyEditor || !indicator) {
+            return;
+        }
+
+        const rawText = bodyEditor.value || '';
+        const trimmed = rawText.trim();
+
+        if (!trimmed) {
+            indicator.textContent = '';
+            indicator.className = 'json-validity-badge';
+            return;
+        }
+
+        try {
+            JSON.parse(trimmed);
+            indicator.textContent = '';
+            indicator.className = 'json-validity-badge';
+        } catch {
+            indicator.textContent = t('bodyMode.invalidJson') || 'Invalid JSON';
+            indicator.className = 'json-validity-badge invalid';
+        }
+    }
+
+    function updateBodyEditorVisualState() {
+        updateBodyEditorHighlight();
+        updateJsonValidityIndicator();
     }
 
     function formatJsonEditorContent() {
@@ -333,7 +393,8 @@
 
         try {
             const parsed = JSON.parse(bodyText);
-            bodyEditor.value = JSON.stringify(parsed, null, 2);
+            bodyEditor.value = JSON.stringify(parsed, null, jsonIndentSpaces);
+            updateBodyEditorVisualState();
         } catch {
             showToast(t('error.invalidJson') || 'Invalid JSON format', 'error');
         }
@@ -388,6 +449,7 @@
 
         if (bodyEditor) {
             bodyEditor.value = formatJsonBodyIfPossible(record.body || '');
+            updateBodyEditorVisualState();
         }
 
         activateBodyMode('json');
@@ -414,6 +476,8 @@
     document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
     document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
     document.getElementById('formatJsonBtn')?.addEventListener('click', formatJsonEditorContent);
+    document.getElementById('bodyEditor')?.addEventListener('input', updateBodyEditorVisualState);
+    document.getElementById('bodyEditor')?.addEventListener('scroll', syncBodyEditorHighlightScroll);
     document.getElementById('historySelect')?.addEventListener('change', () => {
         const historySelect = document.getElementById('historySelect');
         const selectedId = historySelect?.value;
@@ -719,6 +783,8 @@
 
     document.getElementById('binaryFileInput')?.addEventListener('change', () => {
         updateBinaryFileNameDisplay();
+
+        updateJsonValidityIndicator();
     });
 
     document.getElementById('debugButton')?.addEventListener('click', () => {
@@ -1146,6 +1212,7 @@
                 const settings = message.data || {};
                 const threshold = Number(settings.largeResponseThresholdBytes);
                 const lineLimit = Number(settings.maxResponseLineNumbers);
+                const indentSpaces = Number(settings.jsonIndentSpaces);
 
                 if (Number.isFinite(threshold) && threshold > 0) {
                     largeResponseThresholdBytes = Math.floor(threshold);
@@ -1154,6 +1221,12 @@
                 if (Number.isFinite(lineLimit) && lineLimit > 0) {
                     maxRenderLineNumbers = Math.floor(lineLimit);
                 }
+
+                if (indentSpaces === 2 || indentSpaces === 4) {
+                    jsonIndentSpaces = indentSpaces;
+                }
+
+                updateBodyEditorVisualState();
                 break;
             }
             case 'debugStatus': {
@@ -1220,6 +1293,8 @@
             activateMainTab('body');
             activateBodyMode(preferredBodyMode);
         }
+
+        updateBodyEditorVisualState();
     }
 
     // Update API endpoint (when switching between different APIs)
@@ -1327,7 +1402,7 @@
             } else {
                 try {
                     const jsonObj = JSON.parse(data.body);
-                    formattedBody = JSON.stringify(jsonObj, null, 2);
+                    formattedBody = JSON.stringify(jsonObj, null, jsonIndentSpaces);
                 } catch {
                     // Not JSON, keep as is
                 }

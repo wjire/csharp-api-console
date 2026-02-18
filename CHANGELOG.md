@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.20] - 2026-02-18
+
+### 中文
+
+#### Changed
+
+- Body(JSON) 发送区新增语法高亮编辑体验，输入时可实时显示 JSON 关键字、字符串、数字、布尔值和 null 的着色
+- 新增 JSON 缩进配置：`csharpApiConsole.jsonIndentSpaces`（仅支持 `2` / `4`，默认 `2`），同时用于请求格式化与响应美化
+
+### English
+
+#### Changed
+
+- Added syntax-highlighted editing experience in the Body (JSON) request area, with live coloring for keys, strings, numbers, booleans, and null values while typing
+- Added JSON indentation setting: `csharpApiConsole.jsonIndentSpaces` (supports only `2` / `4`, default `2`), used for both request formatting and response pretty-printing
+
 ## [1.0.19] - 2026-02-18
 
 ### 中文

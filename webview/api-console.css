@@ -471,6 +471,22 @@ body {
     background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
+.json-validity-badge {
+    display: none;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    line-height: 1.3;
+    user-select: none;
+}
+
+.json-validity-badge.invalid {
+    display: inline-block;
+    color: var(--vscode-inputValidation-errorForeground, var(--vscode-errorForeground));
+    border: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground));
+    background-color: var(--vscode-inputValidation-errorBackground, transparent);
+}
+
 .formdata-content-type {
     margin-bottom: 8px;
     color: var(--vscode-descriptionForeground);
@@ -646,17 +662,72 @@ body {
     display: none;
 }
 
-.body-editor {
+.json-editor-container {
+    position: relative;
     width: 100%;
     flex: 1;
     min-height: 200px;
-    padding: 10px;
-    background-color: var(--vscode-input-background);
-    color: var(--vscode-input-foreground);
     border: 1px solid var(--vscode-input-border);
     border-radius: 4px;
+    background-color: var(--vscode-input-background);
+    overflow: hidden;
+}
+
+.json-editor-highlight {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 10px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
     font-family: 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--vscode-input-foreground);
+    pointer-events: none;
+}
+
+.json-editor-highlight code {
+    display: block;
+    min-height: 100%;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    white-space: inherit;
+    word-break: inherit;
+}
+
+.body-editor {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    padding: 10px;
+    background-color: transparent;
+    color: transparent;
+    caret-color: var(--vscode-input-foreground);
+    border: none;
+    border-radius: 0;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
     resize: none;
+    overflow: auto;
+}
+
+.body-editor::selection {
+    background-color: var(--vscode-editor-selectionBackground);
+}
+
+.body-editor::placeholder {
+    color: var(--vscode-descriptionForeground);
+}
+
+.body-editor:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
 }
 
 .query-string-input {

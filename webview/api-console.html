@@ -53,13 +53,18 @@
                             <button class="body-mode-tab" data-body-mode="formdata" type="button">FormData</button>
                             <button class="body-mode-tab" data-body-mode="binary" type="button">Binary</button>
                             <div class="body-mode-spacer"></div>
+                            <span class="json-validity-badge" id="jsonValidityBadge"></span>
                             <button type="button" class="json-format-btn" id="formatJsonBtn">Format</button>
                         </div>
 
                         <div class="body-mode-content">
                             <div class="body-mode-panel active" id="bodyModeJson">
-                                <textarea class="body-editor" id="bodyEditor"
-                                    placeholder="Enter JSON body here..."></textarea>
+                                <div class="json-editor-container" id="jsonEditorContainer">
+                                    <pre class="json-editor-highlight"
+                                        aria-hidden="true"><code id="bodyEditorHighlight"></code></pre>
+                                    <textarea class="body-editor" id="bodyEditor" placeholder="Enter JSON body here..."
+                                        spellcheck="false"></textarea>
+                                </div>
                             </div>
                             <div class="body-mode-panel" id="bodyModeFormData">
                                 <div class="formdata-content-type" id="formDataContentTypeHint">Content-Type:

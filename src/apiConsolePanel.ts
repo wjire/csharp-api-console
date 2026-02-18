@@ -382,10 +382,11 @@ export class ApiConsolePanel {
         return Math.floor(timeoutSeconds * 1000);
     }
 
-    private getRenderSettings(): { largeResponseThresholdBytes: number; maxResponseLineNumbers: number } {
+    private getRenderSettings(): { largeResponseThresholdBytes: number; maxResponseLineNumbers: number; jsonIndentSpaces: 2 | 4 } {
         const config = vscode.workspace.getConfiguration('csharpApiConsole');
         const thresholdKb = config.get<number>('largeResponseThresholdKb', 1024);
         const maxLineNumbers = config.get<number>('maxResponseLineNumbers', 2000);
+        const jsonIndentSpaces = config.get<number>('jsonIndentSpaces', 2);
 
         const safeThresholdKb = Number.isFinite(thresholdKb) && thresholdKb > 0 ? thresholdKb : 1024;
         const safeMaxLineNumbers = Number.isFinite(maxLineNumbers) && maxLineNumbers > 0
@@ -394,7 +395,8 @@ export class ApiConsolePanel {
 
         return {
             largeResponseThresholdBytes: Math.floor(safeThresholdKb * 1024),
-            maxResponseLineNumbers: safeMaxLineNumbers
+            maxResponseLineNumbers: safeMaxLineNumbers,
+            jsonIndentSpaces: jsonIndentSpaces === 4 ? 4 : 2
         };
     }
 

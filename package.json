@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -126,6 +126,15 @@
                     "type": "number",
                     "default": 2000,
                     "description": "%configuration.maxResponseLineNumbers.description%"
+                },
+                "csharpApiConsole.jsonIndentSpaces": {
+                    "type": "number",
+                    "default": 2,
+                    "enum": [
+                        2,
+                        4
+                    ],
+                    "description": "%configuration.jsonIndentSpaces.description%"
                 },
                 "csharpApiConsole.requestHistoryMaxBodyKb": {
                     "type": "number",

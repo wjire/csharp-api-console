@@ -10,7 +10,7 @@
     "configuration.requestHistoryLimit.description": "每个接口保留的历史请求条数上限。",
     "configuration.requestHistoryEnabled.description": "是否启用请求历史记录的保存与加载。",
     "configuration.requestHistoryTtlDays.description": "请求历史 TTL（天）。加载历史时会自动清理超时记录。（<=0 表示永久保留）",
-    "configuration.requestTimeoutSeconds.description": "HTTP 请求超时时间（秒）。",
+    "configuration.requestTimeoutSeconds.description": "HTTP 请求超时时间（秒）。（<=0 表示不设置超时）",
     "configuration.largeResponseThresholdKb.description": "大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。",
     "configuration.maxResponseLineNumbers.description": "UI 中最多渲染的响应行号数量。",
     "configuration.requestHistoryMaxBodyKb.description": "请求历史中可保存的 Body 最大大小（KB），超过后将保存为空。"

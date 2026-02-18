@@ -87,7 +87,7 @@ export class HttpClient {
         };
     }
 
-    private sendRawRequest(httpModule: any, requestOptions: any, timeoutMs: number, payload?: string | Buffer): Promise<{
+    private sendRawRequest(httpModule: any, requestOptions: any, timeoutMs?: number, payload?: string | Buffer): Promise<{
         statusCode: number;
         headers: Record<string, string>;
         body: string;
@@ -113,9 +113,11 @@ export class HttpClient {
                 reject(error);
             });
 
-            req.setTimeout(timeoutMs, () => {
-                req.destroy(new Error(`Request timeout (${Math.floor(timeoutMs / 1000)}s)`));
-            });
+            if (timeoutMs && Number.isFinite(timeoutMs) && timeoutMs > 0) {
+                req.setTimeout(timeoutMs, () => {
+                    req.destroy(new Error(`Request timeout (${Math.floor(timeoutMs / 1000)}s)`));
+                });
+            }
 
             if (payload !== undefined) {
                 req.write(payload);
@@ -134,7 +136,7 @@ export class HttpClient {
         const startTime = Date.now();
         const timeoutMs = options.timeoutMs && Number.isFinite(options.timeoutMs) && options.timeoutMs > 0
             ? Math.floor(options.timeoutMs)
-            : 30000;
+            : undefined;
 
         try {
             const https = require('https');

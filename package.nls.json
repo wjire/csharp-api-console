@@ -10,7 +10,7 @@
     "configuration.requestHistoryLimit.description": "Max request history items kept per endpoint.",
     "configuration.requestHistoryEnabled.description": "Enable request history persistence and loading.",
     "configuration.requestHistoryTtlDays.description": "Request history TTL in days. Expired entries are auto-removed when loading history. (<=0 = keep forever)",
-    "configuration.requestTimeoutSeconds.description": "HTTP request timeout in seconds.",
+    "configuration.requestTimeoutSeconds.description": "HTTP request timeout in seconds. (<=0 = no timeout)",
     "configuration.largeResponseThresholdKb.description": "Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.",
     "configuration.maxResponseLineNumbers.description": "Maximum response line numbers rendered in the UI.",
     "configuration.requestHistoryMaxBodyKb.description": "Maximum request body size in KB to persist in request history. Bodies larger than this are stored as empty."

@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -114,7 +114,7 @@
                 },
                 "csharpApiConsole.requestTimeoutSeconds": {
                     "type": "number",
-                    "default": 30,
+                    "default": 0,
                     "description": "%configuration.requestTimeoutSeconds.description%"
                 },
                 "csharpApiConsole.largeResponseThresholdKb": {

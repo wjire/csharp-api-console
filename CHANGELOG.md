@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.19] - 2026-02-18
+
+### 中文
+
+#### Changed
+
+- 调整请求超时配置：`csharpApiConsole.requestTimeoutSeconds` 默认值改为 `0`（默认不设置超时）
+- 优化超时语义：当配置值 `<=0` 时不再回退为 `30s`，便于断点调试场景
+
+### English
+
+#### Changed
+
+- Updated request-timeout setting: `csharpApiConsole.requestTimeoutSeconds` now defaults to `0` (no timeout by default)
+- Improved timeout semantics: values `<=0` no longer fall back to `30s`, making breakpoint debugging scenarios more reliable
+
 ## [1.0.18] - 2026-02-17
 
 ### 中文

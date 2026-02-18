@@ -154,9 +154,9 @@ Search for `C# API Console` in VS Code settings:
   Request history TTL in days. Expired entries are auto-removed when loading history. Set `<= 0` to keep forever.
 
 ### `csharpApiConsole.requestTimeoutSeconds`
-- **Default**: `30`
-  HTTP 请求超时时间（秒）。  
-  HTTP request timeout in seconds.
+- **Default**: `0`
+  HTTP 请求超时时间（秒），设置为 `<= 0` 表示不设置超时。  
+  HTTP request timeout in seconds. Set `<= 0` to disable timeout.
 
 ### `csharpApiConsole.largeResponseThresholdKb`
 - **Default**: `1024`

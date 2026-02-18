@@ -370,13 +370,13 @@ export class ApiConsolePanel {
         return Math.min(20, Math.max(1, Math.floor(configuredLimit)));
     }
 
-    private getRequestTimeoutMs(): number {
+    private getRequestTimeoutMs(): number | undefined {
         const timeoutSeconds = vscode.workspace
             .getConfiguration('csharpApiConsole')
-            .get<number>('requestTimeoutSeconds', 30);
+            .get<number>('requestTimeoutSeconds', 0);
 
         if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
-            return 30000;
+            return undefined;
         }
 
         return Math.floor(timeoutSeconds * 1000);

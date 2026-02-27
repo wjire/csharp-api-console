@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.22] - 2026-02-27
+
+### 中文
+
+#### Fixed
+
+- 修复 `netcoreapp*.*` 项目调试兼容性问题：按目标框架自动选择调试器，避免旧框架在新链路下无法启动
+
+#### Changed
+
+- 优化多目标框架（`TargetFrameworks`）项目的调试选择策略：优先选择 `net5.0+`，其次 `netcoreapp*`
+- 当使用 `coreclr` 且目标 DLL 不存在时，改为友好提示“请先构建 Debug”，并显示缺失程序集路径
+
+### English
+
+#### Fixed
+
+- Fixed debugging compatibility for `netcoreapp*.*` projects by selecting debugger type based on target framework
+
+#### Changed
+
+- Improved debugger selection strategy for multi-target (`TargetFrameworks`) projects: prefer `net5.0+`, then `netcoreapp*`
+- Added a friendly pre-check for `coreclr`: when the target DLL is missing, shows a “build Debug first” message with the missing assembly path
+
 ## [1.0.21] - 2026-02-18
 
 ### 中文

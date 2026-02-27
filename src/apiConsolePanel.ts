@@ -218,14 +218,31 @@ export class ApiConsolePanel {
         const debugName = projectName
             ? `${projectName} Debug`
             : `${ApiConsolePanel.DEBUG_SESSION_PREFIX} Debug`;
+        const targetFrameworks = this.getTargetFrameworksFromProject(this.currentProjectPath);
+        const selectedFramework = this.selectPreferredTargetFramework(targetFrameworks);
 
-        const debugConfiguration: vscode.DebugConfiguration = {
-            name: debugName,
-            type: 'dotnet',
-            request: 'launch',
-            projectPath: this.currentProjectPath,
-            env
-        };
+        const debugConfiguration: vscode.DebugConfiguration = this.shouldUseCoreClrDebug(selectedFramework)
+            ? this.createCoreClrDebugConfiguration(debugName, this.currentProjectPath, env, selectedFramework)
+            : {
+                name: debugName,
+                type: 'dotnet',
+                request: 'launch',
+                projectPath: this.currentProjectPath,
+                env
+            };
+
+        if (debugConfiguration.type === 'coreclr') {
+            const programPath = typeof debugConfiguration.program === 'string'
+                ? debugConfiguration.program
+                : '';
+
+            if (!programPath || !fs.existsSync(programPath)) {
+                const frameworkText = selectedFramework ? `（${selectedFramework}）` : '';
+                const message = lang.t('webview.debug.buildDebugFirst', frameworkText, programPath || 'unknown');
+                this.postDebugStatus('error', message);
+                return;
+            }
+        }
 
         try {
             const started = await vscode.debug.startDebugging(workspaceFolder, debugConfiguration);
@@ -316,6 +333,154 @@ export class ApiConsolePanel {
     private getProjectNameFromPath(projectPath: string): string {
         const ext = path.extname(projectPath);
         return path.basename(projectPath, ext).trim();
+    }
+
+    /**
+     * 从 csproj 读取目标框架列表（支持 TargetFramework / TargetFrameworks）
+     */
+    private getTargetFrameworksFromProject(projectPath: string): string[] {
+        try {
+            if (!fs.existsSync(projectPath)) {
+                return [];
+            }
+
+            const content = fs.readFileSync(projectPath, 'utf8');
+            const tfmMatch = content.match(/<TargetFramework>\s*([^<\s]+)\s*<\/TargetFramework>/i);
+            if (tfmMatch && tfmMatch[1]) {
+                return [tfmMatch[1].trim()];
+            }
+
+            const tfmsMatch = content.match(/<TargetFrameworks>\s*([^<]+)\s*<\/TargetFrameworks>/i);
+            if (!tfmsMatch || !tfmsMatch[1]) {
+                return [];
+            }
+
+            return tfmsMatch[1]
+                .split(';')
+                .map(item => item.trim())
+                .filter(item => item.length > 0);
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * 选择用于调试的首选目标框架：优先 net5+，其次 netcoreapp，最后回退为列表首项
+     */
+    private selectPreferredTargetFramework(targetFrameworks: string[]): string | undefined {
+        if (!targetFrameworks || targetFrameworks.length === 0) {
+            return undefined;
+        }
+
+        const modernNet = targetFrameworks
+            .map(tfm => ({ tfm, version: this.parseNetVersion(tfm, 'net') }))
+            .filter(item => item.version && item.version.major >= 5)
+            .sort((a, b) => {
+                const majorDelta = (b.version?.major ?? 0) - (a.version?.major ?? 0);
+                if (majorDelta !== 0) {
+                    return majorDelta;
+                }
+                return (b.version?.minor ?? 0) - (a.version?.minor ?? 0);
+            });
+
+        if (modernNet.length > 0) {
+            return modernNet[0].tfm;
+        }
+
+        const netCoreApp = targetFrameworks
+            .map(tfm => ({ tfm, version: this.parseNetVersion(tfm, 'netcoreapp') }))
+            .filter(item => item.version)
+            .sort((a, b) => {
+                const majorDelta = (b.version?.major ?? 0) - (a.version?.major ?? 0);
+                if (majorDelta !== 0) {
+                    return majorDelta;
+                }
+                return (b.version?.minor ?? 0) - (a.version?.minor ?? 0);
+            });
+
+        if (netCoreApp.length > 0) {
+            return netCoreApp[0].tfm;
+        }
+
+        return targetFrameworks[0];
+    }
+
+    /**
+     * 根据目标框架自动选择调试器：net5+ 使用 dotnet，其余回退 coreclr
+     */
+    private shouldUseCoreClrDebug(targetFramework: string | undefined): boolean {
+        if (!targetFramework) {
+            return false;
+        }
+
+        const netVersion = this.parseNetVersion(targetFramework, 'net');
+        if (netVersion && netVersion.major >= 5) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private createCoreClrDebugConfiguration(
+        debugName: string,
+        projectPath: string,
+        env: Record<string, string>,
+        targetFramework: string | undefined
+    ): vscode.DebugConfiguration {
+        const projectDir = path.dirname(projectPath);
+        const assemblyName = this.getAssemblyNameFromProject(projectPath) || this.getProjectNameFromPath(projectPath);
+        const framework = targetFramework || 'netcoreapp3.1';
+        const program = path.join(projectDir, 'bin', 'Debug', framework, `${assemblyName}.dll`);
+
+        return {
+            name: debugName,
+            type: 'coreclr',
+            request: 'launch',
+            projectPath,
+            program,
+            cwd: projectDir,
+            env,
+            stopAtEntry: false
+        };
+    }
+
+    /**
+     * 从 csproj 读取 AssemblyName（若未显式配置则返回 undefined）
+     */
+    private getAssemblyNameFromProject(projectPath: string): string | undefined {
+        try {
+            if (!fs.existsSync(projectPath)) {
+                return undefined;
+            }
+
+            const content = fs.readFileSync(projectPath, 'utf8');
+            const assemblyNameMatch = content.match(/<AssemblyName>\s*([^<\s]+)\s*<\/AssemblyName>/i);
+            return assemblyNameMatch?.[1]?.trim();
+        } catch {
+            return undefined;
+        }
+    }
+
+    /**
+     * 解析 TFM 版本（支持后缀，如 net8.0-windows）
+     */
+    private parseNetVersion(
+        targetFramework: string,
+        prefix: 'net' | 'netcoreapp'
+    ): { major: number; minor: number } | undefined {
+        const tfm = targetFramework.trim().toLowerCase();
+        const baseTfm = tfm.split('-')[0];
+        const regex = new RegExp(`^${prefix}(\\d+)\\.(\\d+)$`, 'i');
+        const match = baseTfm.match(regex);
+
+        if (!match) {
+            return undefined;
+        }
+
+        return {
+            major: Number(match[1]),
+            minor: Number(match[2])
+        };
     }
 
     /**

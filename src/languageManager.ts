@@ -36,6 +36,7 @@ const TEXT_MAP = {
         'webview.debug.alreadyRunning': '调试会话已在运行',
         'webview.debug.failed': '启动调试失败',
         'webview.debug.noProject': '缺少项目路径，无法启动调试',
+        'webview.debug.buildDebugFirst': '请先构建 Debug{0}，未找到目标程序集：{1}',
 
         // WebView - 标签页
         'webview.tab.headers': 'Headers',
@@ -122,6 +123,7 @@ const TEXT_MAP = {
         'webview.debug.alreadyRunning': 'Debug session is already running',
         'webview.debug.failed': 'Failed to start debugging',
         'webview.debug.noProject': 'Missing project path, cannot start debugging',
+        'webview.debug.buildDebugFirst': 'Please build Debug{0} first. Target assembly not found: {1}',
 
         // WebView - Tabs
         'webview.tab.headers': 'Headers',

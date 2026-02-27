@@ -80,6 +80,12 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 调试状态自动同步：通过工具栏停止、命令面板停止或 `Shift+F5` 结束会话后，按钮状态会自动恢复  
   Debug status syncs automatically: when a session ends via toolbar stop, command palette stop, or `Shift+F5`, button state resets automatically
 
+- 按目标框架自动选择调试器：`net5.0+` 默认使用 `dotnet`，`netcoreapp` 等旧框架自动回退 `coreclr`，兼容旧项目调试  
+  Automatically selects debugger by target framework: uses `dotnet` for `net5.0+`, and falls back to `coreclr` for older frameworks such as `netcoreapp` for better legacy compatibility
+
+- `coreclr` 启动前会预检查目标 DLL；若不存在会提示先构建 Debug，并显示缺失程序集路径，减少排查成本  
+  Performs a pre-check for target DLL before `coreclr` launch; if missing, prompts to build Debug first and shows the missing assembly path for faster troubleshooting
+
 ### 🔗 **自动配置 Base URL** | Auto Base URL Configuration
 
 - 自动读取项目的 `launchSettings.json` 文件  

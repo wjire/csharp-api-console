@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.23] - 2026-02-28
+
+### 中文
+
+#### Changed
+
+- 调整 `coreclr` 调试启动流程：启动前始终自动执行 Debug 构建（按目标框架）；构建失败则取消启动并提示，若构建后仍缺失 DLL 则显示缺失程序集路径
+
+### English
+
+#### Changed
+
+- Updated `coreclr` debug launch flow to always run Debug build first (by target framework); if build fails, launch is canceled with a friendly message, and if DLL is still missing after build, the missing assembly path is shown
+
 ## [1.0.22] - 2026-02-27
 
 ### 中文

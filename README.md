@@ -83,8 +83,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 按目标框架自动选择调试器：`net5.0+` 默认使用 `dotnet`，`netcoreapp` 等旧框架自动回退 `coreclr`，兼容旧项目调试  
   Automatically selects debugger by target framework: uses `dotnet` for `net5.0+`, and falls back to `coreclr` for older frameworks such as `netcoreapp` for better legacy compatibility
 
-- `coreclr` 启动前会预检查目标 DLL；若不存在会提示先构建 Debug，并显示缺失程序集路径，减少排查成本  
-  Performs a pre-check for target DLL before `coreclr` launch; if missing, prompts to build Debug first and shows the missing assembly path for faster troubleshooting
+- `coreclr` 启动调试前会先自动执行 Debug 构建（按目标框架）；若构建失败会取消启动并提示，若构建后仍缺失 DLL 则显示缺失程序集路径  
+  Before `coreclr` debug launch, the extension automatically runs a Debug build first (by target framework); if build fails, launch is canceled with a friendly message, and if DLL is still missing after build, the missing assembly path is shown
 
 ### 🔗 **自动配置 Base URL** | Auto Base URL Configuration
 

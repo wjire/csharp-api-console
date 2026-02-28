@@ -232,6 +232,14 @@ export class ApiConsolePanel {
             };
 
         if (debugConfiguration.type === 'coreclr') {
+            this.postDebugStatus('starting', lang.t('webview.debug.building'));
+
+            const buildSucceeded = await this.buildProjectForCoreClr(this.currentProjectPath, selectedFramework);
+            if (!buildSucceeded) {
+                this.postDebugStatus('error', lang.t('webview.debug.buildFailed'));
+                return;
+            }
+
             const programPath = typeof debugConfiguration.program === 'string'
                 ? debugConfiguration.program
                 : '';
@@ -242,6 +250,8 @@ export class ApiConsolePanel {
                 this.postDebugStatus('error', message);
                 return;
             }
+
+            this.postDebugStatus('starting');
         }
 
         try {
@@ -261,6 +271,46 @@ export class ApiConsolePanel {
                 : lang.t('webview.debug.failed');
 
             this.postDebugStatus('error', message);
+        }
+    }
+
+    /**
+     * coreclr 启动前执行 Debug 构建（按选中的目标框架）
+     */
+    private async buildProjectForCoreClr(projectPath: string, targetFramework: string | undefined): Promise<boolean> {
+        try {
+            const workspaceFolder = this.getWorkspaceFolderForCurrentProject();
+            const projectDir = path.dirname(projectPath);
+            const projectName = this.getProjectNameFromPath(projectPath) || 'Project';
+            const args = ['build', projectPath, '-c', 'Debug'];
+
+            if (targetFramework) {
+                args.push('-f', targetFramework);
+            }
+
+            const buildTask = new vscode.Task(
+                { type: 'process', task: 'buildCoreClrDebug' },
+                workspaceFolder ?? vscode.TaskScope.Workspace,
+                `${projectName} Build Debug`,
+                'C# API Console',
+                new vscode.ProcessExecution('dotnet', args, { cwd: projectDir }),
+                '$msCompile'
+            );
+
+            const execution = await vscode.tasks.executeTask(buildTask);
+
+            const exitCode = await new Promise<number | undefined>((resolve) => {
+                const disposable = vscode.tasks.onDidEndTaskProcess((event) => {
+                    if (event.execution === execution) {
+                        disposable.dispose();
+                        resolve(event.exitCode);
+                    }
+                });
+            });
+
+            return exitCode === 0;
+        } catch {
+            return false;
         }
     }
 

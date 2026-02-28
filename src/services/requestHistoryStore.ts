@@ -4,6 +4,7 @@ export interface RequestHistoryItem {
     id: string;
     query: string;
     body: string;
+    token?: string;
     timestamp: number;
     statusCode: number | null;
 }

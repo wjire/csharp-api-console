@@ -438,6 +438,7 @@
         const queryStringInput = document.getElementById('queryStringInput');
         const bodyEditor = document.getElementById('bodyEditor');
         const queryList = document.getElementById('queryList');
+        const tokenInput = document.getElementById('tokenInput');
 
         if (queryStringInput) {
             queryStringInput.value = record.query || '';
@@ -450,6 +451,10 @@
         if (bodyEditor) {
             bodyEditor.value = formatJsonBodyIfPossible(record.body || '');
             updateBodyEditorVisualState();
+        }
+
+        if (tokenInput) {
+            tokenInput.value = record.token || '';
         }
 
         activateBodyMode('json');
@@ -1034,6 +1039,7 @@
                 method,
                 url: finalUrl,
                 headers,
+                token,
                 body,
                 path: replacedRoute,
                 query: historyQuery,

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.25] - 2026-02-28
+
+### 中文
+
+#### Added
+
+- 新增配置项 `csharpApiConsole.requestHistorySaveBearerToken`（默认 `false`）：开启后请求历史可保存并回填 Bearer Token
+
+### English
+
+#### Added
+
+- Added `csharpApiConsole.requestHistorySaveBearerToken` (default `false`): when enabled, request history can persist and restore Bearer Token
+
 ## [1.0.24] - 2026-02-28
 
 ### 中文

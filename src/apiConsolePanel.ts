@@ -540,6 +540,7 @@ export class ApiConsolePanel {
         method: string;
         url: string;
         headers: Record<string, string>;
+        token?: string;
         body?: string;
         path?: string;
         query?: string;
@@ -631,6 +632,12 @@ export class ApiConsolePanel {
         return vscode.workspace
             .getConfiguration('csharpApiConsole')
             .get<boolean>('requestHistoryEnabled', true);
+    }
+
+    private shouldSaveBearerTokenInHistory(): boolean {
+        return vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<boolean>('requestHistorySaveBearerToken', false);
     }
 
     private getCurrentEndpointKey(fallbackMethod?: string): string | null {
@@ -732,6 +739,7 @@ export class ApiConsolePanel {
         requestData: {
             method: string;
             url: string;
+            token?: string;
             body?: string;
             path?: string;
             query?: string;
@@ -760,11 +768,16 @@ export class ApiConsolePanel {
         const body = Buffer.byteLength(sanitizedBody, 'utf8') > maxBodyBytes
             ? ''
             : sanitizedBody;
+        const shouldSaveToken = this.shouldSaveBearerTokenInHistory();
+        const token = shouldSaveToken
+            ? (requestData.token?.trim() || '')
+            : '';
 
         const item: RequestHistoryItem = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             query,
             body,
+            token,
             timestamp: Date.now(),
             statusCode: typeof response.statusCode === 'number' ? response.statusCode : null
         };
@@ -791,9 +804,17 @@ export class ApiConsolePanel {
         }
 
         const history = await this.requestHistoryStore.getHistory(endpointKey);
+        const shouldExposeToken = this.shouldSaveBearerTokenInHistory();
+        const historyForWebView = shouldExposeToken
+            ? history
+            : history.map(item => ({
+                ...item,
+                token: ''
+            }));
+
         this.panel.webview.postMessage({
             type: 'requestHistoryLoaded',
-            data: history
+            data: historyForWebView
         });
     }
 

@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.0.24",
+    "version": "1.0.25",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -56,7 +56,8 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "onLanguage:csharp"
+        "onLanguage:csharp",
+        "onCommand:csharpApiConsole.testEndpoint"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -106,6 +107,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "%configuration.requestHistoryEnabled.description%"
+                },
+                "csharpApiConsole.requestHistorySaveBearerToken": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "%configuration.requestHistorySaveBearerToken.description%"
                 },
                 "csharpApiConsole.requestHistoryTtlDays": {
                     "type": "number",

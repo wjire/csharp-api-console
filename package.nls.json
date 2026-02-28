@@ -9,6 +9,7 @@
     "configuration.defaultApiVersion.description": "Default API version when controller has no [ApiVersion] attribute. Set to empty string to keep placeholder unreplaced.",
     "configuration.requestHistoryLimit.description": "Max request history items kept per endpoint.",
     "configuration.requestHistoryEnabled.description": "Enable request history persistence and loading.",
+    "configuration.requestHistorySaveBearerToken.description": "Whether to save Bearer Token in request history. Disabled by default for security.",
     "configuration.requestHistoryTtlDays.description": "Request history TTL in days. Expired entries are auto-removed when loading history. (<=0 = keep forever)",
     "configuration.requestTimeoutSeconds.description": "HTTP request timeout in seconds. (<=0 = no timeout)",
     "configuration.largeResponseThresholdKb.description": "Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.",

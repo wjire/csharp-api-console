@@ -116,6 +116,9 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 不保存敏感信息，仅保留轻量历史数据（状态码、时间、Query、Body）  
   Sensitive data is not persisted; only lightweight history data is kept (status, time, query, body)
 
+- 可通过配置选择是否保存并回填 Bearer Token（默认关闭）  
+  You can optionally enable saving/restoring Bearer Token via configuration (disabled by default)
+
 ## ⚙️ 配置 | Configuration
 
 在 VS Code 设置中搜索 `C# API Console`:  
@@ -153,6 +156,11 @@ Search for `C# API Console` in VS Code settings:
 - **Default**: `true`
   是否启用请求历史记录的保存与加载。  
   Enable request history persistence and loading.
+
+### `csharpApiConsole.requestHistorySaveBearerToken`
+- **Default**: `false`
+  是否在请求历史中保存并回填 Bearer Token。默认关闭以保障安全。  
+  Whether to save and restore Bearer Token in request history. Disabled by default for security.
 
 ### `csharpApiConsole.requestHistoryTtlDays`
 - **Default**: `3`

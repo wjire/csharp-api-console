@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.26] - 2026-02-28
+
+### 中文
+
+#### Changed
+
+- 调整请求体发送策略：`GET` 请求现在支持携带 Body（JSON），仅 `HEAD` 仍不发送 Body，以兼容 `[FromBody]` 的 GET 场景
+
+### English
+
+#### Changed
+
+- Updated request-body behavior: `GET` requests can now send Body (JSON); only `HEAD` remains bodyless, improving compatibility with `[FromBody]` GET scenarios
+
 ## [1.0.25] - 2026-02-28
 
 ### 中文

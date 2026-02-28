@@ -1005,7 +1005,7 @@
         let binaryContentType = undefined;
         let binaryFileName = undefined;
         let formDataFields = undefined;
-        const canHaveBody = !['GET', 'HEAD'].includes(method.toUpperCase());
+        const canHaveBody = method.toUpperCase() !== 'HEAD';
         if (canHaveBody) {
             if (currentBodyMode === 'binary') {
                 const binaryFileInput = document.getElementById('binaryFileInput');

@@ -941,7 +941,9 @@ body.vscode-light .body-editor::-moz-selection {
     font-size: 13px;
     line-height: 1.6;
     overflow: visible;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
     user-select: text;
     cursor: text;
     outline: none;
@@ -957,7 +959,9 @@ body.vscode-light .body-editor::-moz-selection {
     font-size: inherit;
     line-height: inherit;
     color: inherit;
-    white-space: pre;
+    white-space: inherit;
+    word-break: inherit;
+    overflow-wrap: inherit;
     user-select: text;
     background-color: transparent;
 }

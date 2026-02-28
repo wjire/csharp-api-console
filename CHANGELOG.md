@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.24] - 2026-02-28
+
+### 中文
+
+#### Changed
+
+- 优化 Response 区域 JSON 展示：根据面板宽度自动换行，提升窄窗口下可读性
+
+### English
+
+#### Changed
+
+- Improved JSON rendering in the Response panel: lines now wrap automatically based on panel width for better readability in narrow layouts
+
 ## [1.0.23] - 2026-02-28
 
 ### 中文

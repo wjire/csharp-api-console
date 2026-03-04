@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.27] - 2026-03-04
+
+### 中文
+
+#### Fixed
+
+- 修复 Response 状态展示问题：不再将所有失败统一显示为 `Error`，改为按真实 HTTP 状态码显示标准状态文案（如 `404 Not Found`、`500 Internal Server Error`）
+- 修复 2xx 状态文案错误：不再固定显示 `200 OK`，改为按实际状态码展示（如 `201 Created`、`204 No Content`）
+
+#### Changed
+
+- 新增无状态码失败的网络错误状态映射：根据错误类型显示友好文案（如 `Timeout`、`Connection Refused`、`DNS Not Found`、`TLS Certificate Error` 等）
+
+### English
+
+#### Fixed
+
+- Fixed response status display: failures are no longer shown as a generic `Error`; the UI now shows standard HTTP reason phrases by real status code (e.g. `404 Not Found`, `500 Internal Server Error`)
+- Fixed incorrect 2xx status text: no longer hardcoded to `200 OK`; now reflects the actual status code (e.g. `201 Created`, `204 No Content`)
+
+#### Changed
+
+- Added friendly network-error status mapping for failures without an HTTP status code (e.g. `Timeout`, `Connection Refused`, `DNS Not Found`, `TLS Certificate Error`)
+
 ## [1.0.26] - 2026-02-28
 
 ### 中文

@@ -32,6 +32,7 @@ export interface HttpResponse {
     headers?: Record<string, string>;
     body?: string;
     error?: string;
+    errorCode?: string;
     duration: number;
 }
 
@@ -254,10 +255,12 @@ export class HttpClient {
 
         } catch (error: any) {
             const duration = Date.now() - startTime;
+            const errorCode = typeof error?.code === 'string' ? error.code : undefined;
 
             return {
                 success: false,
                 error: error.message,
+                errorCode,
                 duration
             };
         }

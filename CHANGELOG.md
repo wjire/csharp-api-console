@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.28] - 2026-03-04
+
+### 中文
+
+#### Changed
+
+- 优化 CodeLens 标签打开策略：重复点击同一接口时，未固定则跳转复用并保留现有输入数据，已固定则新建测试面板；点击其他接口始终新建面板
+
+### English
+
+#### Changed
+
+- Optimized CodeLens tab-opening strategy: for repeated clicks on the same endpoint, an unpinned tab is revealed and reused without changing current input state, while a pinned tab opens a new test panel; clicking a different endpoint always opens a new panel
+
 ## [1.0.27] - 2026-03-04
 
 ### 中文

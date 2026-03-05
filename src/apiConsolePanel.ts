@@ -14,11 +14,14 @@ import { LaunchSettingsReader } from './launchSettingsReader';
  * 管理 WebView 面板，处理 API 测试请求
  */
 export class ApiConsolePanel {
+    private static readonly DEBUG_CHANNEL_NAME = 'C# API Console Debug';
     public static currentPanel: ApiConsolePanel | undefined;
     private readonly panel: vscode.WebviewPanel;
+    private readonly viewType: string;
     private readonly extensionUri: vscode.Uri;
     private disposables: vscode.Disposable[] = [];
     private pendingApiEndpoint: ApiEndpoint | null = null;
+    private isWebviewReady = false;
     private readonly projectConfigCache: ProjectConfigCache;
     private readonly httpClient: HttpClient;
     private readonly baseUrlConfigManager: BaseUrlConfigManager;
@@ -26,9 +29,37 @@ export class ApiConsolePanel {
     private readonly context: vscode.ExtensionContext;
     private currentProjectPath: string = '';
     private currentApiEndpoint: ApiEndpoint | null = null;
+    private endpointKey: string;
+    private tabPinned = false;
     private static readonly DEBUG_SESSION_PREFIX = 'C# API Console';
     private static readonly runningProjectPaths = new Set<string>();
     private static readonly openPanels = new Set<ApiConsolePanel>();
+    private static readonly panelByEndpointKey = new Map<string, ApiConsolePanel>();
+    private static panelCounter = 0;
+    private static outputChannel: vscode.OutputChannel | undefined;
+
+    public static initializeDiagnostics(context: vscode.ExtensionContext): void {
+        if (ApiConsolePanel.outputChannel) {
+            return;
+        }
+
+        ApiConsolePanel.outputChannel = vscode.window.createOutputChannel(ApiConsolePanel.DEBUG_CHANNEL_NAME);
+        context.subscriptions.push(ApiConsolePanel.outputChannel);
+        ApiConsolePanel.logDebug('Diagnostics initialized.');
+    }
+
+    public static showDiagnosticsChannel(): void {
+        ApiConsolePanel.outputChannel?.show(true);
+    }
+
+    private static logDebug(message: string): void {
+        const timestamp = new Date().toISOString();
+        const line = `[${timestamp}] ${message}`;
+
+        ApiConsolePanel.outputChannel?.appendLine(line);
+        // 同步输出到扩展主机控制台，便于在 Output 看不到通道时兜底排查。
+        console.log(`[C# API Console Debug] ${line}`);
+    }
 
     public static onDebugSessionStarted(session: vscode.DebugSession): void {
         const config = session.configuration as { projectPath?: string };
@@ -62,9 +93,16 @@ export class ApiConsolePanel {
         }
     }
 
+    public static syncTabPinnedStates(): void {
+        ApiConsolePanel.logDebug(`syncTabPinnedStates() openPanels=${ApiConsolePanel.openPanels.size}`);
+        for (const panel of ApiConsolePanel.openPanels) {
+            panel.syncPinnedStateFromTab();
+        }
+    }
+
     /**
      * 创建或显示测试面板
-     * 每次都创建新的标签页
+      * 同一接口：未固定则跳转复用，已固定则新建
      */
     public static createOrShow(
         extensionUri: vscode.Uri,
@@ -73,16 +111,38 @@ export class ApiConsolePanel {
         baseUrlConfigManager: BaseUrlConfigManager,
         context: vscode.ExtensionContext
     ) {
+        ApiConsolePanel.showDiagnosticsChannel();
+        const endpointKey = ApiConsolePanel.getEndpointKey(apiEndpoint);
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
 
-        // 每次都创建新面板，支持多个测试标签
+        ApiConsolePanel.logDebug(`createOrShow() endpointKey=${endpointKey} column=${column ?? 'undefined'} mappedPanels=${ApiConsolePanel.panelByEndpointKey.size}`);
+
+        const existingPanel = ApiConsolePanel.panelByEndpointKey.get(endpointKey);
+        if (existingPanel) {
+            ApiConsolePanel.logDebug(`existing panel found viewType=${existingPanel.viewType} endpointKey=${endpointKey}`);
+            existingPanel.reveal(column);
+
+            if (!existingPanel.shouldOpenNewForSameEndpoint()) {
+                ApiConsolePanel.logDebug(`decision=reuse viewType=${existingPanel.viewType} endpointKey=${endpointKey}`);
+                ApiConsolePanel.currentPanel = existingPanel;
+                return;
+            }
+
+            ApiConsolePanel.logDebug(`decision=create_new_for_same_endpoint viewType=${existingPanel.viewType} endpointKey=${endpointKey}`);
+        }
+
+        const panelId = ++ApiConsolePanel.panelCounter;
+        const viewType = `apiConsolePanel.${panelId}`;
+
         const panel = vscode.window.createWebviewPanel(
-            'apiConsolePanel',
-            // `⚡ ${apiEndpoint.httpMethod} ${apiEndpoint.routeTemplate}`,
-            `⚡ ${apiEndpoint.action || apiEndpoint.routeTemplate}`,
-            column || vscode.ViewColumn.One,
+            viewType,
+            ApiConsolePanel.getPanelTitle(apiEndpoint),
+            {
+                viewColumn: column || vscode.ViewColumn.One,
+                preserveFocus: false
+            },
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
@@ -95,27 +155,44 @@ export class ApiConsolePanel {
         // 设置标签页图标为debug图标  
         panel.iconPath = new vscode.ThemeIcon('debug');
 
-        // 创建新实例（不再复用 currentPanel）
-        new ApiConsolePanel(panel, extensionUri, apiEndpoint, projectConfigCache, baseUrlConfigManager, context);
+        const newPanel = new ApiConsolePanel(
+            panel,
+            viewType,
+            extensionUri,
+            apiEndpoint,
+            endpointKey,
+            projectConfigCache,
+            baseUrlConfigManager,
+            context
+        );
+
+        ApiConsolePanel.currentPanel = newPanel;
+        ApiConsolePanel.panelByEndpointKey.set(endpointKey, newPanel);
+        ApiConsolePanel.logDebug(`created panel viewType=${viewType} endpointKey=${endpointKey}`);
     }
 
     private constructor(
         panel: vscode.WebviewPanel,
+        viewType: string,
         extensionUri: vscode.Uri,
         apiEndpoint: ApiEndpoint,
+        endpointKey: string,
         projectConfigCache: ProjectConfigCache,
         baseUrlConfigManager: BaseUrlConfigManager,
         context: vscode.ExtensionContext
     ) {
         this.panel = panel;
+        this.viewType = viewType;
         this.extensionUri = extensionUri;
         this.pendingApiEndpoint = apiEndpoint;
+        this.endpointKey = endpointKey;
         this.projectConfigCache = projectConfigCache;
         this.httpClient = new HttpClient();
         this.baseUrlConfigManager = baseUrlConfigManager;
         this.requestHistoryStore = new RequestHistoryStore(context);
         this.context = context;
         ApiConsolePanel.openPanels.add(this);
+        ApiConsolePanel.logDebug(`panel constructed viewType=${this.viewType} endpointKey=${this.endpointKey}`);
 
         // 加载静态 HTML 内容
         this.panel.webview.html = this.getStaticHtml();
@@ -131,49 +208,28 @@ export class ApiConsolePanel {
         );
     }
 
+    private static getPanelTitle(apiEndpoint: ApiEndpoint): string {
+        return `⚡ ${apiEndpoint.action || apiEndpoint.routeTemplate}`;
+    }
+
+    private static getEndpointKey(apiEndpoint: ApiEndpoint): string {
+        const method = (apiEndpoint.httpMethod || '').trim().toUpperCase();
+        const route = (apiEndpoint.routeTemplate || '').trim();
+        const action = (apiEndpoint.action || '').trim();
+        const projectPath = ApiConsolePanel.normalizeProjectPath(apiEndpoint.projectPath || '');
+
+        return `${projectPath}::${method}::${route}::${action}`;
+    }
+
     /**
      * 处理来自 WebView 的消息
      */
     private async handleMessage(message: any) {
         switch (message.type) {
             case 'webviewReady':
-                // WebView 已准备好，发送初始化数据
+                this.isWebviewReady = true;
                 if (this.pendingApiEndpoint) {
-                    // 性能优化：延迟加载项目配置
-                    // 仅在用户点击测试按钮时才查找项目文件和读取配置
-                    await this.enrichApiEndpoint(this.pendingApiEndpoint);
-
-                    // 保存当前项目路径
-                    this.currentProjectPath = this.pendingApiEndpoint.projectPath || '';
-                    this.currentApiEndpoint = { ...this.pendingApiEndpoint };
-
-                    // 发送初始化数据
-                    this.panel.webview.postMessage({
-                        type: 'initialize',
-                        data: this.pendingApiEndpoint
-                    });
-
-                    // 发送语言文本
-                    this.panel.webview.postMessage({
-                        type: 'i18n',
-                        data: lang.getWebViewTexts()
-                    });
-
-                    // 发送渲染配置
-                    this.panel.webview.postMessage({
-                        type: 'renderSettings',
-                        data: this.getRenderSettings()
-                    });
-
-                    // 主动发送 Base URLs（确保 currentProjectPath 已设置）
-                    await this.loadBaseUrls();
-
-                    // 加载当前接口历史记录
-                    await this.loadRequestHistory();
-
-                    // 同步当前项目调试状态
-                    this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
-
+                    await this.applyEndpoint(this.pendingApiEndpoint, 'initialize');
                     this.pendingApiEndpoint = null;
                 }
                 break;
@@ -193,6 +249,92 @@ export class ApiConsolePanel {
                 await this.clearRequestHistory();
                 break;
         }
+    }
+
+    private async applyEndpoint(apiEndpoint: ApiEndpoint, messageType: 'initialize' | 'updateApiEndpoint'): Promise<void> {
+        await this.enrichApiEndpoint(apiEndpoint);
+
+        this.currentProjectPath = apiEndpoint.projectPath || '';
+        this.currentApiEndpoint = { ...apiEndpoint };
+
+        this.panel.webview.postMessage({
+            type: messageType,
+            data: apiEndpoint
+        });
+
+        this.panel.webview.postMessage({
+            type: 'i18n',
+            data: lang.getWebViewTexts()
+        });
+
+        this.panel.webview.postMessage({
+            type: 'renderSettings',
+            data: this.getRenderSettings()
+        });
+
+        await this.loadBaseUrls();
+        await this.loadRequestHistory();
+        this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
+    }
+
+    private reveal(column: vscode.ViewColumn | undefined): void {
+        ApiConsolePanel.logDebug(`reveal panel viewType=${this.viewType} targetColumn=${column ?? 'undefined'}`);
+        this.panel.reveal(column, false);
+    }
+
+    private shouldOpenNewForSameEndpoint(): boolean {
+        this.syncPinnedStateFromTab();
+        ApiConsolePanel.logDebug(`shouldOpenNewForSameEndpoint viewType=${this.viewType} tabPinned=${this.tabPinned}`);
+        return this.tabPinned;
+    }
+
+    private syncPinnedStateFromTab(): void {
+        const tab = this.findTabByViewType();
+        if (!tab) {
+            ApiConsolePanel.logDebug(`syncPinnedStateFromTab viewType=${this.viewType} tab=not_found`);
+            ApiConsolePanel.logTabsSnapshot(`tab_not_found_for_${this.viewType}`);
+            return;
+        }
+
+        // 在部分 VS Code 版本中 Webview 标签即使未固定也可能 isPreview=false，
+        // 因此仅以 isPinned 作为“已固定”判定，避免误判后始终新开。
+        this.tabPinned = tab.isPinned;
+        ApiConsolePanel.logDebug(`syncPinnedStateFromTab viewType=${this.viewType} tabLabel=${tab.label} isPinned=${tab.isPinned} isPreview=${tab.isPreview} resolvedPinned=${this.tabPinned}`);
+    }
+
+    private findTabByViewType(): vscode.Tab | undefined {
+        for (const group of vscode.window.tabGroups.all) {
+            for (const tab of group.tabs) {
+                const input = tab.input as { viewType?: unknown } | undefined;
+                const runtimeViewType = typeof input?.viewType === 'string' ? input.viewType : undefined;
+                if (!runtimeViewType) {
+                    continue;
+                }
+
+                if (
+                    runtimeViewType === this.viewType ||
+                    runtimeViewType.endsWith(`-${this.viewType}`) ||
+                    runtimeViewType.endsWith(this.viewType)
+                ) {
+                    return tab;
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    private static logTabsSnapshot(reason: string): void {
+        const allGroups = vscode.window.tabGroups.all;
+        ApiConsolePanel.logDebug(`tabs snapshot reason=${reason} groupCount=${allGroups.length}`);
+
+        allGroups.forEach((group, groupIndex) => {
+            group.tabs.forEach((tab, tabIndex) => {
+                const input = tab.input as { viewType?: unknown } | undefined;
+                const viewType = typeof input?.viewType === 'string' ? input.viewType : 'n/a';
+                ApiConsolePanel.logDebug(`tabs[${groupIndex}][${tabIndex}] label=${tab.label} viewType=${viewType} isPinned=${tab.isPinned} isPreview=${tab.isPreview} isActive=${tab.isActive}`);
+            });
+        });
     }
 
     /**
@@ -921,8 +1063,15 @@ export class ApiConsolePanel {
      * 释放资源
      */
     public dispose() {
-        ApiConsolePanel.currentPanel = undefined;
+        if (ApiConsolePanel.currentPanel === this) {
+            ApiConsolePanel.currentPanel = undefined;
+        }
+        const mappedPanel = ApiConsolePanel.panelByEndpointKey.get(this.endpointKey);
+        if (mappedPanel === this) {
+            ApiConsolePanel.panelByEndpointKey.delete(this.endpointKey);
+        }
         ApiConsolePanel.openPanels.delete(this);
+        ApiConsolePanel.logDebug(`dispose panel viewType=${this.viewType} endpointKey=${this.endpointKey}`);
 
         // 清理 HttpClient 资源（如果有的话）
         if (this.httpClient && typeof (this.httpClient as any).dispose === 'function') {

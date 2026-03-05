@@ -12,6 +12,9 @@ let baseUrlConfigManager: BaseUrlConfigManager | undefined;
  * 插件激活入口
  */
 export function activate(context: vscode.ExtensionContext) {
+    ApiConsolePanel.initializeDiagnostics(context);
+    vscode.window.setStatusBarMessage('C# API Console Debug enabled. If logs are empty, run Developer: Reload Window.', 6000);
+
     // 1. 创建项目配置缓存
     const projectConfigCache = new ProjectConfigCache();
 
@@ -73,6 +76,18 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             ApiConsolePanel.createOrShow(context.extensionUri, apiInfo, projectConfigCache, manager, context);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('csharpApiConsole.showDiagnostics', () => {
+            ApiConsolePanel.showDiagnosticsChannel();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.window.tabGroups.onDidChangeTabs(() => {
+            ApiConsolePanel.syncTabPinnedStates();
         })
     );
 

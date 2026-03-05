@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.29] - 2026-03-05
+
+### 中文
+
+#### Added
+
+- 在 Response 区域新增 `打开` 按钮：可将当前响应内容写入剪贴板，并一键在新的未保存编辑器中打开，便于查看大文本响应
+
+### English
+
+#### Added
+
+- Added an `Open` button in the Response area: copies current response content to clipboard and opens it in a new untitled editor for easier inspection of large responses
+
 ## [1.0.28] - 2026-03-04
 
 ### 中文

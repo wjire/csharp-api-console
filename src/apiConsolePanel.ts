@@ -213,6 +213,49 @@ export class ApiConsolePanel {
             case 'clearRequestHistory':
                 await this.clearRequestHistory();
                 break;
+            case 'openResponseInEditor':
+                await this.openResponseInEditor(message.data?.content);
+                break;
+        }
+    }
+
+    private async openResponseInEditor(content: unknown): Promise<void> {
+        const responseText = typeof content === 'string' ? content : String(content ?? '');
+        if (!responseText) {
+            return;
+        }
+
+        try {
+            await vscode.env.clipboard.writeText(responseText);
+
+            const document = await vscode.workspace.openTextDocument({
+                language: this.detectResponseLanguage(responseText),
+                content: responseText
+            });
+
+            await vscode.window.showTextDocument(document, {
+                preview: false,
+                preserveFocus: false
+            });
+        } catch (error) {
+            const detail = error instanceof Error && error.message
+                ? `: ${error.message}`
+                : '';
+            void vscode.window.showErrorMessage(`${lang.t('webview.error.requestFailed')}${detail}`);
+        }
+    }
+
+    private detectResponseLanguage(responseText: string): string {
+        const trimmed = responseText.trim();
+        if (!trimmed) {
+            return 'plaintext';
+        }
+
+        try {
+            JSON.parse(trimmed);
+            return 'json';
+        } catch {
+            return 'plaintext';
         }
     }
 

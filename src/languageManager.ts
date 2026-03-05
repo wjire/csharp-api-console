@@ -83,6 +83,8 @@ const TEXT_MAP = {
         'webview.size.label': '大小:',
         'webview.time.label': '耗时:',
         'webview.status.sending': '正在发送...',
+        'webview.response.copyOpen': '打开',
+        'webview.response.empty': '暂无响应内容可打开',
 
         // WebView - Base URL 管理
         'webview.baseUrl.manage': '管理 Base URLs',
@@ -172,6 +174,8 @@ const TEXT_MAP = {
         'webview.size.label': 'Size:',
         'webview.time.label': 'Time:',
         'webview.status.sending': 'Sending...',
+        'webview.response.copyOpen': 'Open',
+        'webview.response.empty': 'No response content to open',
 
         // WebView - Base URL Management
         'webview.baseUrl.manage': 'Manage Base URLs',

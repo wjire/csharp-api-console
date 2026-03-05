@@ -22,6 +22,7 @@
     let largeResponseThresholdBytes = 1024 * 1024;
     let maxRenderLineNumbers = 2000;
     let jsonIndentSpaces = 2;
+    let latestResponseText = '';
 
     function getBodyModePanelId(mode) {
         if (mode === 'formdata') {
@@ -500,6 +501,21 @@
     document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
         vscode.postMessage({
             type: 'clearRequestHistory'
+        });
+    });
+
+    document.getElementById('openResponseInEditorBtn')?.addEventListener('click', () => {
+        const responseText = typeof latestResponseText === 'string' ? latestResponseText : '';
+        if (!responseText) {
+            showToast(t('response.empty') || 'No response content to open', 'info');
+            return;
+        }
+
+        vscode.postMessage({
+            type: 'openResponseInEditor',
+            data: {
+                content: responseText
+            }
         });
     });
 
@@ -1062,6 +1078,11 @@
         document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
         document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
+        const openResponseInEditorBtn = document.getElementById('openResponseInEditorBtn');
+        if (openResponseInEditorBtn) {
+            openResponseInEditorBtn.textContent = t('response.copyOpen') || 'Open';
+            openResponseInEditorBtn.title = t('response.copyOpen') || 'Open';
+        }
 
         // Update existing dynamic row action buttons (rows may be created before i18n arrives)
         document.querySelectorAll('#headersList .remove-button, #queryList .remove-button').forEach(btn => {
@@ -1505,6 +1526,7 @@
 
         document.getElementById('headerCount').textContent = '0';
         document.getElementById('responseHeaders').innerHTML = '';
+        latestResponseText = '';
     }
 
     // Display response
@@ -1548,6 +1570,8 @@
                 responseHtml = highlightJSON(formattedBody);
             }
 
+            latestResponseText = formattedBody;
+
             document.getElementById('responseBody').innerHTML = responseHtml;
 
             // Update headers
@@ -1579,6 +1603,7 @@
 
             // Display error in response body
             document.getElementById('responseBody').innerHTML = escapeHtml(data.error);
+            latestResponseText = typeof data.error === 'string' ? data.error : String(data.error || '');
             renderLineNumbers(1);
 
             document.getElementById('headerCount').textContent = '0';

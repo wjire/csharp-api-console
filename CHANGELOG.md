@@ -11,23 +11,13 @@ All notable changes to this project will be documented in this file.
 
 #### Added
 
-- 新增活动栏入口 `API 控制台`：点击后打开类似资源管理器的侧边视图，按项目分组展示当前已打开的测试面板
-- 侧边视图中的测试面板项支持点击跳转回对应 WebView 标签页，并提供手动刷新按钮
-
-#### Changed
-
-- 将活动栏侧边视图从原生 TreeView 升级为 Webview 布局：支持 `Current` / `Favorites` 双标签、搜索过滤、收藏、卡片显示与自定义名称
+- 新增活动栏 `API 控制台`：提供专用图标（`#` + 闪电）与 `Current` 卡片视图，可集中查看当前已打开测试面板，并展示 HTTP 方法、Base URL、路由及点击跳转能力
 
 ### English
 
 #### Added
 
-- Added a new activity bar entry `API Console`: opens an explorer-like side view that groups currently open test panels by project
-- Test panel items in the side view are clickable to reveal the corresponding WebView tab, with a manual refresh action in the view title
-
-#### Changed
-
-- Upgraded the activity side view from native TreeView to a Webview layout with `Current` / `Favorites` tabs, filtering, favorites, card-style rendering, and custom display names
+- Added an `API Console` activity bar experience with a dedicated icon (`#` + lightning) and a `Current` card-style list for open test panels, including HTTP method, Base URL, route display, and click-to-reveal behavior
 
 ## [1.0.29] - 2026-03-05
 

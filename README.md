@@ -16,6 +16,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/codeLens.png)
 
+![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/preview.png)
+
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/json.png)
 
 ![功能截图](https://raw.githubusercontent.com/wjire/csharp-api-console/master/resources/formData.png)

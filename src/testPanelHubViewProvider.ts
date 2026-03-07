@@ -1,18 +1,9 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { ApiConsolePanel, OpenApiConsolePanelInfo } from './apiConsolePanel';
+import { lang } from './languageManager';
 
 type DebugStatus = 'idle' | 'running';
-
-interface FavoritePanelItem {
-    endpointKey: string;
-    displayName: string;
-    method: string;
-    route: string;
-    action: string;
-    projectPath: string;
-    updatedAt: number;
-}
 
 interface CurrentPanelVm {
     id: string;
@@ -29,33 +20,20 @@ interface CurrentPanelVm {
     isFavorite: boolean;
 }
 
-interface FavoritePanelVm {
-    endpointKey: string;
-    displayName: string;
-    method: string;
-    route: string;
-    action: string;
-    projectPath: string;
-    panelId: string | null;
-    isOpen: boolean;
-    debugStatus: DebugStatus;
-}
-
 interface ViewState {
     currentPanels: CurrentPanelVm[];
-    favorites: FavoritePanelVm[];
+    i18n: {
+        currentTabLabel: string;
+        noPanelsMessage: string;
+        panelMissingWarning: string;
+    };
 }
-
-const FAVORITES_KEY = 'csharpApiConsole.testPanelFavorites';
 
 export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     private view: vscode.WebviewView | undefined;
     private disposables: vscode.Disposable[] = [];
 
-    constructor(
-        private readonly extensionUri: vscode.Uri,
-        private readonly context: vscode.ExtensionContext
-    ) {
+    constructor(private readonly extensionUri: vscode.Uri) {
         this.disposables.push(
             ApiConsolePanel.onDidPanelsChanged(() => this.refresh())
         );
@@ -79,7 +57,7 @@ export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vsc
             async (message: any) => {
                 const messageType = String(message?.type || '');
 
-                if (messageType === 'ready' || messageType === 'refresh') {
+                if (messageType === 'ready') {
                     this.refresh();
                     return;
                 }
@@ -88,29 +66,12 @@ export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vsc
                     const panelId = String(message?.data?.panelId || '');
                     const revealed = ApiConsolePanel.revealPanelById(panelId);
                     if (!revealed) {
-                        void vscode.window.showWarningMessage('测试面板不存在，可能已被关闭。');
+                        void vscode.window.showWarningMessage(this.getI18nTexts().panelMissingWarning);
                     }
                     this.refresh();
                     return;
                 }
 
-                if (messageType === 'toggleFavorite') {
-                    const endpointKey = String(message?.data?.endpointKey || '');
-                    if (endpointKey) {
-                        await this.toggleFavorite(endpointKey);
-                        this.refresh();
-                    }
-                    return;
-                }
-
-                if (messageType === 'renameFavorite') {
-                    const endpointKey = String(message?.data?.endpointKey || '');
-                    const displayName = String(message?.data?.displayName || '').trim();
-                    if (endpointKey && displayName) {
-                        await this.renameFavorite(endpointKey, displayName);
-                        this.refresh();
-                    }
-                }
             },
             undefined,
             this.disposables
@@ -161,26 +122,14 @@ export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vsc
 
     private buildState(): ViewState {
         const openPanels = ApiConsolePanel.getOpenPanelInfos();
-        const favorites = this.getFavorites();
-
-        const openByEndpoint = new Map<string, OpenApiConsolePanelInfo>();
-        for (const panel of openPanels) {
-            openByEndpoint.set(panel.endpointKey, panel);
-        }
-
-        const favoriteByEndpoint = new Map<string, FavoritePanelItem>();
-        for (const favorite of favorites) {
-            favoriteByEndpoint.set(favorite.endpointKey, favorite);
-        }
 
         const currentPanels: CurrentPanelVm[] = openPanels.map(panel => {
-            const favorite = favoriteByEndpoint.get(panel.endpointKey);
-            const fallbackName = this.getDefaultDisplayName(panel);
+            const baseUrl = this.getBaseUrlDisplayName(panel);
 
             return {
                 id: panel.id,
                 endpointKey: panel.endpointKey,
-                displayName: favorite?.displayName || fallbackName,
+                displayName: baseUrl,
                 method: panel.method,
                 route: panel.route,
                 action: panel.action,
@@ -189,109 +138,26 @@ export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vsc
                 isPinned: panel.isPinned,
                 isVisible: panel.isVisible,
                 isActive: panel.isActive,
-                isFavorite: favoriteByEndpoint.has(panel.endpointKey)
-            };
-        });
-
-        const favoritePanels: FavoritePanelVm[] = favorites.map(favorite => {
-            const open = openByEndpoint.get(favorite.endpointKey);
-            const method = open?.method || favorite.method;
-            const route = open?.route || favorite.route;
-            const action = open?.action || favorite.action;
-            const projectPath = open?.projectPath || favorite.projectPath;
-
-            return {
-                endpointKey: favorite.endpointKey,
-                displayName: favorite.displayName,
-                method,
-                route,
-                action,
-                projectPath,
-                panelId: open?.id || null,
-                isOpen: Boolean(open),
-                debugStatus: open?.debugStatus || 'idle'
+                isFavorite: false
             };
         });
 
         return {
             currentPanels,
-            favorites: favoritePanels
+            i18n: this.getI18nTexts()
         };
     }
 
-    private async toggleFavorite(endpointKey: string): Promise<void> {
-        const favorites = this.getFavorites();
-        const index = favorites.findIndex(item => item.endpointKey === endpointKey);
-
-        if (index >= 0) {
-            favorites.splice(index, 1);
-            await this.saveFavorites(favorites);
-            return;
-        }
-
-        const panel = ApiConsolePanel.getOpenPanelInfos().find(item => item.endpointKey === endpointKey);
-        if (!panel) {
-            return;
-        }
-
-        favorites.unshift({
-            endpointKey,
-            displayName: this.getDefaultDisplayName(panel),
-            method: panel.method,
-            route: panel.route,
-            action: panel.action,
-            projectPath: panel.projectPath,
-            updatedAt: Date.now()
-        });
-
-        await this.saveFavorites(favorites);
-    }
-
-    private async renameFavorite(endpointKey: string, displayName: string): Promise<void> {
-        const favorites = this.getFavorites();
-        const existing = favorites.find(item => item.endpointKey === endpointKey);
-
-        if (existing) {
-            existing.displayName = displayName;
-            existing.updatedAt = Date.now();
-            await this.saveFavorites(favorites);
-            return;
-        }
-
-        const panel = ApiConsolePanel.getOpenPanelInfos().find(item => item.endpointKey === endpointKey);
-        if (!panel) {
-            return;
-        }
-
-        favorites.unshift({
-            endpointKey,
-            displayName,
-            method: panel.method,
-            route: panel.route,
-            action: panel.action,
-            projectPath: panel.projectPath,
-            updatedAt: Date.now()
-        });
-
-        await this.saveFavorites(favorites);
-    }
-
-    private getFavorites(): FavoritePanelItem[] {
-        const value = this.context.workspaceState.get<FavoritePanelItem[]>(FAVORITES_KEY, []);
-        return Array.isArray(value) ? [...value] : [];
-    }
-
-    private async saveFavorites(favorites: FavoritePanelItem[]): Promise<void> {
-        const deduped = new Map<string, FavoritePanelItem>();
-        for (const item of favorites) {
-            deduped.set(item.endpointKey, item);
-        }
-
-        const ordered = Array.from(deduped.values())
-            .sort((a, b) => b.updatedAt - a.updatedAt)
-            .slice(0, 200);
-
-        await this.context.workspaceState.update(FAVORITES_KEY, ordered);
+    private getI18nTexts(): {
+        currentTabLabel: string;
+        noPanelsMessage: string;
+        panelMissingWarning: string;
+    } {
+        return {
+            currentTabLabel: lang.t('webview.hub.current'),
+            noPanelsMessage: lang.t('webview.hub.empty'),
+            panelMissingWarning: lang.t('webview.hub.panelMissing')
+        };
     }
 
     private getDefaultDisplayName(panel: OpenApiConsolePanelInfo): string {
@@ -306,5 +172,24 @@ export class TestPanelHubViewProvider implements vscode.WebviewViewProvider, vsc
         }
 
         return panel.title;
+    }
+
+    private getBaseUrlDisplayName(panel: OpenApiConsolePanelInfo): string {
+        const fullUrl = (panel.fullUrl || '').trim();
+        if (fullUrl.length > 0) {
+            try {
+                const parsed = new URL(fullUrl);
+                return parsed.origin;
+            } catch {
+                // Ignore parsing failure and continue with fallback extraction.
+            }
+        }
+
+        const route = (panel.route || '').trim();
+        if (fullUrl.length > route.length && route.length > 0 && fullUrl.endsWith(route)) {
+            return fullUrl.slice(0, fullUrl.length - route.length).replace(/\/$/, '');
+        }
+
+        return this.getDefaultDisplayName(panel);
     }
 }

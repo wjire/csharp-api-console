@@ -85,6 +85,9 @@ const TEXT_MAP = {
         'webview.status.sending': '正在发送...',
         'webview.response.copyOpen': '打开',
         'webview.response.empty': '暂无响应内容可打开',
+        'webview.hub.current': '当前',
+        'webview.hub.empty': '暂无已打开的测试面板。',
+        'webview.hub.panelMissing': '测试面板不存在，可能已被关闭。',
 
         // WebView - Base URL 管理
         'webview.baseUrl.manage': '管理 Base URLs',
@@ -176,6 +179,9 @@ const TEXT_MAP = {
         'webview.status.sending': 'Sending...',
         'webview.response.copyOpen': 'Open',
         'webview.response.empty': 'No response content to open',
+        'webview.hub.current': 'Current',
+        'webview.hub.empty': 'No open test panels.',
+        'webview.hub.panelMissing': 'Test panel not found. It may have been closed.',
 
         // WebView - Base URL Management
         'webview.baseUrl.manage': 'Manage Base URLs',
@@ -211,8 +217,8 @@ export class LanguageManager {
         const vscodeLanguage = vscode.env.language.toLowerCase();
 
         // 判断是否为中文环境
-        this.currentLanguage = vscodeLanguage.startsWith('zh') ? 'zh-cn' : 'en';
-        // this.currentLanguage = 'en';
+        //this.currentLanguage = vscodeLanguage.startsWith('zh') ? 'zh-cn' : 'en';
+        this.currentLanguage = 'en';
     }
 
     /**

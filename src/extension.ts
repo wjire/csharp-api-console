@@ -66,14 +66,14 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 3. 注册 API 测试命令
     context.subscriptions.push(
-        vscode.commands.registerCommand('csharpApiConsole.testEndpoint', (apiInfo) => {
+        vscode.commands.registerCommand('csharpApiConsole.testEndpoint', async (apiInfo) => {
             const manager = ensureBaseUrlConfigManager();
             if (!manager) {
                 vscode.window.showErrorMessage('请先打开一个工作区');
                 return;
             }
 
-            ApiConsolePanel.createOrShow(context.extensionUri, apiInfo, projectConfigCache, manager, context);
+            await ApiConsolePanel.createOrShow(context.extensionUri, apiInfo, projectConfigCache, manager, context);
         })
     );
 
@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    const testPanelHubProvider = new TestPanelHubViewProvider(context.extensionUri, context);
+    const testPanelHubProvider = new TestPanelHubViewProvider(context.extensionUri);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('csharpApiConsoleTestPanelsView', testPanelHubProvider)
     );

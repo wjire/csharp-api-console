@@ -3,11 +3,15 @@ const vscode = acquireVsCodeApi();
 const state = {
     data: {
         currentPanels: [],
-        favorites: []
+        i18n: {
+            currentTabLabel: 'Current',
+            noPanelsMessage: 'No open test panels.'
+        }
     }
 };
 
 const listRoot = document.getElementById('listRoot');
+const currentTabLabel = document.getElementById('currentTabLabel');
 
 window.addEventListener('message', (event) => {
     const message = event.data || {};
@@ -15,7 +19,10 @@ window.addEventListener('message', (event) => {
         return;
     }
 
-    state.data = message.data || { currentPanels: [], favorites: [] };
+    state.data = message.data || { currentPanels: [] };
+    if (currentTabLabel) {
+        currentTabLabel.textContent = state.data?.i18n?.currentTabLabel || 'Current';
+    }
     render();
 });
 
@@ -23,7 +30,8 @@ function render() {
     const items = state.data.currentPanels;
 
     if (items.length === 0) {
-        listRoot.innerHTML = '<div class="empty">No panels to show.</div>';
+        const emptyText = state.data?.i18n?.noPanelsMessage || 'No open test panels.';
+        listRoot.innerHTML = `<div class="empty">${escapeHtml(emptyText)}</div>`;
         return;
     }
 

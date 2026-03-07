@@ -13,6 +13,7 @@ export interface OpenApiConsolePanelInfo {
     id: string;
     endpointKey: string;
     title: string;
+    fullUrl: string;
     method: string;
     route: string;
     action: string;
@@ -123,14 +124,17 @@ export class ApiConsolePanel {
      * 创建或显示测试面板
       * 同一接口：未固定则跳转复用，已固定则新建
      */
-    public static createOrShow(
+    public static async createOrShow(
         extensionUri: vscode.Uri,
         apiEndpoint: ApiEndpoint,
         projectConfigCache: ProjectConfigCache,
         baseUrlConfigManager: BaseUrlConfigManager,
         context: vscode.ExtensionContext
-    ) {
-        const endpointKey = ApiConsolePanel.getEndpointKey(apiEndpoint);
+    ): Promise<void> {
+        const endpointForPanel: ApiEndpoint = { ...apiEndpoint };
+        await ApiConsolePanel.enrichEndpointFullUrl(endpointForPanel, projectConfigCache);
+
+        const endpointKey = ApiConsolePanel.getEndpointKey(endpointForPanel);
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
             : undefined;
@@ -151,7 +155,7 @@ export class ApiConsolePanel {
 
         const panel = vscode.window.createWebviewPanel(
             viewType,
-            ApiConsolePanel.getPanelTitle(apiEndpoint),
+            ApiConsolePanel.getPanelTitle(endpointForPanel),
             {
                 viewColumn: column || vscode.ViewColumn.One,
                 preserveFocus: false
@@ -173,7 +177,7 @@ export class ApiConsolePanel {
             panelId,
             viewType,
             extensionUri,
-            apiEndpoint,
+            endpointForPanel,
             endpointKey,
             projectConfigCache,
             baseUrlConfigManager,
@@ -182,6 +186,21 @@ export class ApiConsolePanel {
 
         ApiConsolePanel.currentPanel = newPanel;
         ApiConsolePanel.panelByEndpointKey.set(endpointKey, newPanel);
+    }
+
+    private static async enrichEndpointFullUrl(
+        apiEndpoint: ApiEndpoint,
+        projectConfigCache: ProjectConfigCache
+    ): Promise<void> {
+        try {
+            const baseUrl = await projectConfigCache.getBaseUrl(apiEndpoint.filePath);
+            apiEndpoint.fullUrl = baseUrl
+                ? `${baseUrl}${apiEndpoint.routeTemplate}`
+                : apiEndpoint.routeTemplate;
+        } catch (error) {
+            console.error('[ApiConsolePanel] Failed to pre-enrich API endpoint:', error);
+            apiEndpoint.fullUrl = apiEndpoint.routeTemplate;
+        }
     }
 
     private constructor(
@@ -243,6 +262,7 @@ export class ApiConsolePanel {
         const endpoint = this.currentApiEndpoint || this.pendingApiEndpoint;
         const method = (endpoint?.httpMethod || '').toUpperCase();
         const route = endpoint?.routeTemplate || '';
+        const fullUrl = endpoint?.fullUrl || '';
         const action = endpoint?.action || '';
         const projectPath = endpoint?.projectPath || this.currentProjectPath;
         const normalizedProjectPath = projectPath
@@ -253,6 +273,7 @@ export class ApiConsolePanel {
             id: String(this.panelId),
             endpointKey: this.endpointKey,
             title: this.panel.title,
+            fullUrl,
             method,
             route,
             action,

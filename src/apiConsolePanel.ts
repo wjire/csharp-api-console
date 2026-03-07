@@ -9,6 +9,21 @@ import { RequestHistoryStore, RequestHistoryItem } from './services/requestHisto
 import { lang } from './languageManager';
 import { LaunchSettingsReader } from './launchSettingsReader';
 
+export interface OpenApiConsolePanelInfo {
+    id: string;
+    endpointKey: string;
+    title: string;
+    method: string;
+    route: string;
+    action: string;
+    projectPath: string;
+    isPinned: boolean;
+    isVisible: boolean;
+    isActive: boolean;
+    debugStatus: 'idle' | 'running';
+    createdOrder: number;
+}
+
 /**
  * API 控制台面板
  * 管理 WebView 面板，处理 API 测试请求
@@ -26,6 +41,7 @@ export class ApiConsolePanel {
     private readonly baseUrlConfigManager: BaseUrlConfigManager;
     private readonly requestHistoryStore: RequestHistoryStore;
     private readonly context: vscode.ExtensionContext;
+    private readonly panelId: number;
     private currentProjectPath: string = '';
     private currentApiEndpoint: ApiEndpoint | null = null;
     private endpointKey: string;
@@ -34,6 +50,9 @@ export class ApiConsolePanel {
     private static readonly runningProjectPaths = new Set<string>();
     private static readonly openPanels = new Set<ApiConsolePanel>();
     private static readonly panelByEndpointKey = new Map<string, ApiConsolePanel>();
+    private static readonly panelById = new Map<string, ApiConsolePanel>();
+    private static readonly onDidPanelsChangedEmitter = new vscode.EventEmitter<void>();
+    public static readonly onDidPanelsChanged = ApiConsolePanel.onDidPanelsChangedEmitter.event;
     private static panelCounter = 0;
 
     public static onDebugSessionStarted(session: vscode.DebugSession): void {
@@ -50,6 +69,8 @@ export class ApiConsolePanel {
                 panel.postDebugStatus('running');
             }
         }
+
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
     }
 
     public static onDebugSessionTerminated(session: vscode.DebugSession): void {
@@ -66,12 +87,36 @@ export class ApiConsolePanel {
                 panel.postDebugStatus('idle');
             }
         }
+
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
     }
 
     public static syncTabPinnedStates(): void {
         for (const panel of ApiConsolePanel.openPanels) {
             panel.syncPinnedStateFromTab();
         }
+
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
+    }
+
+    public static getOpenPanelInfos(): OpenApiConsolePanelInfo[] {
+        const panels = Array.from(ApiConsolePanel.openPanels)
+            .map(panel => panel.getPanelInfo())
+            .sort((a, b) => a.createdOrder - b.createdOrder);
+
+        return panels;
+    }
+
+    public static revealPanelById(panelId: string): boolean {
+        const panel = ApiConsolePanel.panelById.get(panelId);
+        if (!panel) {
+            return false;
+        }
+
+        panel.reveal(vscode.ViewColumn.Active);
+        ApiConsolePanel.currentPanel = panel;
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
+        return true;
     }
 
     /**
@@ -96,6 +141,7 @@ export class ApiConsolePanel {
 
             if (!existingPanel.shouldOpenNewForSameEndpoint()) {
                 ApiConsolePanel.currentPanel = existingPanel;
+                ApiConsolePanel.onDidPanelsChangedEmitter.fire();
                 return;
             }
         }
@@ -124,6 +170,7 @@ export class ApiConsolePanel {
 
         const newPanel = new ApiConsolePanel(
             panel,
+            panelId,
             viewType,
             extensionUri,
             apiEndpoint,
@@ -139,6 +186,7 @@ export class ApiConsolePanel {
 
     private constructor(
         panel: vscode.WebviewPanel,
+        panelId: number,
         viewType: string,
         extensionUri: vscode.Uri,
         apiEndpoint: ApiEndpoint,
@@ -148,6 +196,7 @@ export class ApiConsolePanel {
         context: vscode.ExtensionContext
     ) {
         this.panel = panel;
+        this.panelId = panelId;
         this.viewType = viewType;
         this.extensionUri = extensionUri;
         this.pendingApiEndpoint = apiEndpoint;
@@ -158,6 +207,8 @@ export class ApiConsolePanel {
         this.requestHistoryStore = new RequestHistoryStore(context);
         this.context = context;
         ApiConsolePanel.openPanels.add(this);
+        ApiConsolePanel.panelById.set(String(this.panelId), this);
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
 
         // 加载静态 HTML 内容
         this.panel.webview.html = this.getStaticHtml();
@@ -184,6 +235,36 @@ export class ApiConsolePanel {
         const projectPath = ApiConsolePanel.normalizeProjectPath(apiEndpoint.projectPath || '');
 
         return `${projectPath}::${method}::${route}::${action}`;
+    }
+
+    private getPanelInfo(): OpenApiConsolePanelInfo {
+        this.syncPinnedStateFromTab();
+
+        const endpoint = this.currentApiEndpoint || this.pendingApiEndpoint;
+        const method = (endpoint?.httpMethod || '').toUpperCase();
+        const route = endpoint?.routeTemplate || '';
+        const action = endpoint?.action || '';
+        const projectPath = endpoint?.projectPath || this.currentProjectPath;
+        const normalizedProjectPath = projectPath
+            ? ApiConsolePanel.normalizeProjectPath(projectPath)
+            : '';
+
+        return {
+            id: String(this.panelId),
+            endpointKey: this.endpointKey,
+            title: this.panel.title,
+            method,
+            route,
+            action,
+            projectPath,
+            isPinned: this.tabPinned,
+            isVisible: this.panel.visible,
+            isActive: ApiConsolePanel.currentPanel === this,
+            debugStatus: normalizedProjectPath && ApiConsolePanel.runningProjectPaths.has(normalizedProjectPath)
+                ? 'running'
+                : 'idle',
+            createdOrder: this.panelId
+        };
     }
 
     /**
@@ -1061,6 +1142,8 @@ export class ApiConsolePanel {
             ApiConsolePanel.panelByEndpointKey.delete(this.endpointKey);
         }
         ApiConsolePanel.openPanels.delete(this);
+        ApiConsolePanel.panelById.delete(String(this.panelId));
+        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
 
         // 清理 HttpClient 资源（如果有的话）
         if (this.httpClient && typeof (this.httpClient as any).dispose === 'function') {

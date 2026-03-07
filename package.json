@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.0.29",
+    "version": "1.1.0",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -56,8 +56,7 @@
         "Debuggers"
     ],
     "activationEvents": [
-        "onLanguage:csharp",
-        "onCommand:csharpApiConsole.testEndpoint"
+        "onLanguage:csharp"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -65,8 +64,32 @@
             {
                 "command": "csharpApiConsole.testEndpoint",
                 "title": "%command.testEndpoint.title%"
+            },
+            {
+                "command": "csharpApiConsole.openTestPanelsView",
+                "title": "%command.openTestPanelsView.title%"
             }
         ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "csharpApiConsoleActivity",
+                    "title": "%viewsContainer.activity.title%",
+                    "icon": "resources/icons/activitybar.svg"
+                }
+            ]
+        },
+        "views": {
+            "csharpApiConsoleActivity": [
+                {
+                    "id": "csharpApiConsoleTestPanelsView",
+                    "name": "%view.testPanelsHub.name%",
+                    "contextualTitle": "",
+                    "type": "webview",
+                    "icon": "resources/icons/activitybar.svg"
+                }
+            ]
+        },
         "configuration": {
             "title": "%configuration.title%",
             "properties": {

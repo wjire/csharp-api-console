@@ -4,6 +4,7 @@ import { CodeLensProvider } from './codeLensProvider';
 import { ApiConsolePanel } from './apiConsolePanel';
 import { ProjectConfigCache } from './projectConfigCache';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
+import { TestPanelHubViewProvider } from './testPanelHubViewProvider';
 
 // 全局配置管理器
 let baseUrlConfigManager: BaseUrlConfigManager | undefined;
@@ -79,6 +80,19 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.tabGroups.onDidChangeTabs(() => {
             ApiConsolePanel.syncTabPinnedStates();
+        })
+    );
+
+    const testPanelHubProvider = new TestPanelHubViewProvider(context.extensionUri, context);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider('csharpApiConsoleTestPanelsView', testPanelHubProvider)
+    );
+    context.subscriptions.push(testPanelHubProvider);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('csharpApiConsole.openTestPanelsView', async () => {
+            await vscode.commands.executeCommand('workbench.view.extension.csharpApiConsoleActivity');
+            await vscode.commands.executeCommand('csharpApiConsoleTestPanelsView.focus');
         })
     );
 

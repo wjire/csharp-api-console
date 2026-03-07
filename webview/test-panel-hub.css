@@ -1,0 +1,136 @@
+:root {
+    --bg: var(--vscode-sideBar-background);
+    --fg: var(--vscode-sideBar-foreground);
+    --muted: var(--vscode-descriptionForeground);
+    --border: var(--vscode-sideBarSectionHeader-border, var(--vscode-panel-border));
+    --card: color-mix(in srgb, var(--bg) 90%, white 10%);
+    --card-hover: color-mix(in srgb, var(--bg) 75%, white 25%);
+    --accent: var(--vscode-focusBorder);
+    --active: var(--vscode-list-activeSelectionBackground);
+    --active-fg: var(--vscode-list-activeSelectionForeground);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--fg);
+    background: var(--bg);
+    font-family: var(--vscode-font-family);
+    font-size: 12px;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 85%, black 15%), var(--bg));
+}
+
+.tab-label {
+    border: 1px solid var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    color: var(--fg);
+    border-radius: 7px;
+    padding: 3px 7px;
+    font-weight: 600;
+}
+
+.list-root {
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 6px;
+    cursor: pointer;
+}
+
+.card:hover {
+    background: var(--card-hover);
+}
+
+.card.is-active {
+    background: var(--active);
+    color: var(--active-fg);
+}
+
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+}
+
+.title {
+    flex: 1;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.method {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    border: 1px solid transparent;
+    color: #ffffff;
+}
+
+.method.method-GET {
+    background-color: #61affe;
+    border-color: #61affe;
+}
+
+.method.method-POST {
+    background-color: #49cc90;
+    border-color: #49cc90;
+}
+
+.method.method-PUT {
+    background-color: #fca130;
+    border-color: #fca130;
+}
+
+.method.method-DELETE {
+    background-color: #f93e3e;
+    border-color: #f93e3e;
+}
+
+.method.method-ANY {
+    background-color: #8a8a8a;
+    border-color: #8a8a8a;
+}
+
+.route {
+    margin-top: 4px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empty {
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+}

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.1] - 2026-03-09
+
+### 中文
+
+#### Changed
+
+- 测试面板标签标题改为显示路由
+
+### English
+
+#### Changed
+
+- Changed test panel tab title to show route
+
 ## [1.1.0] - 2026-03-06
 
 ### 中文

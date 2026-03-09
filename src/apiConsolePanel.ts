@@ -169,8 +169,11 @@ export class ApiConsolePanel {
             }
         );
 
-        // 设置标签页图标为debug图标  
-        panel.iconPath = new vscode.ThemeIcon('debug');
+        // Use a fixed yellow icon file so the tab icon color is not overridden by theme.
+        panel.iconPath = {
+            light: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'zap-yellow.svg'),
+            dark: vscode.Uri.joinPath(extensionUri, 'resources', 'icons', 'zap-yellow.svg')
+        };
 
         const newPanel = new ApiConsolePanel(
             panel,
@@ -244,7 +247,18 @@ export class ApiConsolePanel {
     }
 
     private static getPanelTitle(apiEndpoint: ApiEndpoint): string {
-        return `⚡ ${apiEndpoint.action || apiEndpoint.routeTemplate}`;
+        const route = (apiEndpoint.routeTemplate || '').trim();
+        const routeWithoutLeadingSlash = route.replace(/^\/+/, '');
+
+        if (routeWithoutLeadingSlash.length > 0) {
+            return routeWithoutLeadingSlash;
+        }
+
+        if (route.length > 0) {
+            return route;
+        }
+
+        return (apiEndpoint.action || '').trim() || 'API';
     }
 
     private static getEndpointKey(apiEndpoint: ApiEndpoint): string {

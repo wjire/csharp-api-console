@@ -14,6 +14,7 @@
     let currentApiEndpoint = null;
     let savedBaseUrls = []; // 存储用户保存的 base URLs
     let defaultBaseUrl = ''; // 默认的 base URL (来自 launchSettings.json)
+    let projectBearerToken = ''; // 当前 Base URL 对应的 Bearer Token
     let tempBaseUrls = []; // 临时编辑中的 base URLs
     let currentBodyMode = 'json';
     let baseUrlMeasureCanvas = null;
@@ -455,7 +456,7 @@
         }
 
         if (tokenInput) {
-            tokenInput.value = record.token || '';
+            tokenInput.value = record.token || projectBearerToken || '';
         }
 
         activateBodyMode('json');
@@ -469,8 +470,107 @@
         return select.value || '';
     }
 
+    function setCurrentBearerToken(token) {
+        projectBearerToken = typeof token === 'string' ? token : '';
+
+        const tokenInput = document.getElementById('tokenInput');
+        if (tokenInput) {
+            tokenInput.value = projectBearerToken;
+        }
+    }
+
+    function requestBearerTokenForCurrentBaseUrl() {
+        const baseUrl = getCurrentBaseUrl().trim();
+        if (!baseUrl) {
+            setCurrentBearerToken('');
+            return;
+        }
+
+        setCurrentBearerToken('');
+        vscode.postMessage({
+            type: 'requestProjectBearerToken',
+            data: { baseUrl }
+        });
+    }
+
     document.getElementById('baseUrlSelect')?.addEventListener('change', () => {
         updateBaseUrlSelectWidth();
+        requestBearerTokenForCurrentBaseUrl();
+    });
+
+    function closeProjectBearerTokenModal() {
+        document.getElementById('projectBearerTokenModal').classList.remove('show');
+    }
+
+    document.getElementById('projectBearerTokenBtn')?.addEventListener('click', () => {
+        if (!getCurrentBaseUrl().trim()) {
+            showToast(t('projectBearer.noBaseUrl'), 'info');
+            return;
+        }
+
+        const modalInput = document.getElementById('projectBearerTokenModalInput');
+        modalInput.value = projectBearerToken.trim();
+        document.getElementById('projectBearerTokenModal').classList.add('show');
+        setTimeout(() => {
+            modalInput.focus();
+            modalInput.select();
+        }, 0);
+    });
+
+    document.getElementById('cancelProjectBearerTokenBtn')?.addEventListener('click', () => {
+        closeProjectBearerTokenModal();
+    });
+
+    function persistCurrentBearerTokenFromAuthInput() {
+        const baseUrl = getCurrentBaseUrl().trim();
+        if (!baseUrl) {
+            showToast(t('projectBearer.noBaseUrl'), 'info');
+            return;
+        }
+
+        const tokenInput = document.getElementById('tokenInput');
+        const nextToken = tokenInput?.value.trim() || '';
+
+        setCurrentBearerToken(nextToken);
+
+        vscode.postMessage({
+            type: 'saveProjectBearerToken',
+            data: {
+                baseUrl,
+                token: nextToken
+            }
+        });
+
+        showToast(nextToken ? t('projectBearer.saved') : t('projectBearer.cleared'), 'success');
+    }
+
+    document.getElementById('saveProjectBearerTokenBtn')?.addEventListener('click', () => {
+        const modalInput = document.getElementById('projectBearerTokenModalInput');
+        const baseUrl = getCurrentBaseUrl().trim();
+        if (!baseUrl) {
+            closeProjectBearerTokenModal();
+            showToast(t('projectBearer.noBaseUrl'), 'info');
+            return;
+        }
+
+        const nextToken = modalInput.value.trim();
+
+        setCurrentBearerToken(nextToken);
+
+        vscode.postMessage({
+            type: 'saveProjectBearerToken',
+            data: {
+                baseUrl,
+                token: nextToken
+            }
+        });
+
+        closeProjectBearerTokenModal();
+        showToast(nextToken ? t('projectBearer.saved') : t('projectBearer.cleared'), 'success');
+    });
+
+    document.getElementById('saveBearerTokenFromAuthBtn')?.addEventListener('click', () => {
+        persistCurrentBearerTokenFromAuthInput();
     });
 
     window.addEventListener('resize', () => {
@@ -1078,6 +1178,12 @@
         document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
         document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
+        document.getElementById('projectBearerTokenBtn').title = t('projectBearer.quickEntry');
+        document.getElementById('saveBearerTokenFromAuthBtn').textContent = t('projectBearer.saveAction');
+        document.getElementById('projectBearerTokenModalTitle').textContent = t('projectBearer.title');
+        document.getElementById('projectBearerTokenModalInput').placeholder = t('placeholder.token');
+        document.getElementById('cancelProjectBearerTokenBtn').title = t('cancel');
+        document.getElementById('saveProjectBearerTokenBtn').title = t('save');
         const openResponseInEditorBtn = document.getElementById('openResponseInEditorBtn');
         if (openResponseInEditorBtn) {
             openResponseInEditorBtn.textContent = t('response.copyOpen') || 'Open';
@@ -1230,7 +1336,12 @@
             case 'loadBaseUrls':
                 savedBaseUrls = message.data || [];
                 renderBaseUrls();
+                requestBearerTokenForCurrentBaseUrl();
                 break;
+            case 'loadProjectBearerToken': {
+                setCurrentBearerToken(typeof message.data === 'string' ? message.data : '');
+                break;
+            }
             case 'requestHistoryLoaded':
                 requestHistory = Array.isArray(message.data) ? message.data : [];
                 renderRequestHistory();
@@ -1276,9 +1387,12 @@
     function initializeWithApiEndpoint(apiEndpoint) {
         currentApiEndpoint = apiEndpoint;
         currentDebugState = 'idle';
+        projectBearerToken = '';
         updateDebugButton();
         requestHistory = [];
         renderRequestHistory();
+
+        setCurrentBearerToken('');
 
         // Update HTTP method and URL
         const methodElement = document.getElementById('httpMethod');

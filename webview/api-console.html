@@ -25,6 +25,7 @@
                 <input type="text" class="route-input" id="routeInput" placeholder="/api/route" />
                 <button class="debug-button" id="debugButton">Debug</button>
                 <button class="send-button" id="sendButton">Send</button>
+                <button class="project-bearer-btn" id="projectBearerTokenBtn" title="Project Bearer Token">🔑</button>
                 <button class="manage-baseurl-btn" id="manageBaseUrlBtn" title="Manage Base URLs">⚙️</button>
                 <div class="history-section">
                     <select class="history-select" id="historySelect">
@@ -110,6 +111,10 @@
 
                         <div class="auth-content">
                             <div class="auth-section active" id="authBearer">
+                                <div class="auth-actions">
+                                    <div class="auth-actions-spacer"></div>
+                                    <button type="button" class="auth-save-btn" id="saveBearerTokenFromAuthBtn">保存</button>
+                                </div>
                                 <!-- <label class="bearer-token-label">Bearer Token</label> -->
                                 <textarea class="bearer-token-input" id="tokenInput"
                                     placeholder="token (Bearer prefix optional)"></textarea>
@@ -200,6 +205,20 @@
             <div class="modal-footer">
                 <button class="icon-btn cancel" id="cancelManageBtn" title="Cancel">✕</button>
                 <button class="icon-btn save" id="saveManageBtn" title="Save">✓</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="projectBearerTokenModal">
+        <div class="modal-content" style="width: 520px; max-width: 95%;">
+            <div class="modal-header" id="projectBearerTokenModalTitle">Project Bearer Token</div>
+            <div class="modal-body">
+                <textarea class="modal-input project-bearer-modal-input" id="projectBearerTokenModalInput"
+                    placeholder="token (Bearer prefix optional)"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="icon-btn cancel" id="cancelProjectBearerTokenBtn" title="Cancel">✕</button>
+                <button class="icon-btn save" id="saveProjectBearerTokenBtn" title="Save">✓</button>
             </div>
         </div>
     </div>

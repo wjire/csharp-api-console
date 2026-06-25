@@ -1,13 +1,13 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ApiEndpoint } from './models/apiEndpoint';
-import { ProjectConfigCache } from './projectConfigCache';
-import { HttpClient } from './services/httpClient';
-import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
-import { RequestHistoryStore, RequestHistoryItem } from './services/requestHistoryStore';
+import * as vscode from 'vscode';
 import { lang } from './languageManager';
 import { LaunchSettingsReader } from './launchSettingsReader';
+import { ApiEndpoint } from './models/apiEndpoint';
+import { ProjectConfigCache } from './projectConfigCache';
+import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
+import { HttpClient } from './services/httpClient';
+import { RequestHistoryItem, RequestHistoryStore } from './services/requestHistoryStore';
 
 export interface OpenApiConsolePanelInfo {
     id: string;
@@ -31,6 +31,7 @@ export interface OpenApiConsolePanelInfo {
  */
 export class ApiConsolePanel {
     public static currentPanel: ApiConsolePanel | undefined;
+    private static readonly projectBearerTokenStorageKey = 'projectBearerToken.byProject';
     private readonly panel: vscode.WebviewPanel;
     private readonly viewType: string;
     private readonly extensionUri: vscode.Uri;
@@ -322,6 +323,12 @@ export class ApiConsolePanel {
                 break;
             case 'saveBaseUrls':
                 await this.saveBaseUrls(message.data);
+                break;
+            case 'requestProjectBearerToken':
+                await this.loadProjectBearerToken(message.data);
+                break;
+            case 'saveProjectBearerToken':
+                await this.saveProjectBearerToken(message.data);
                 break;
             case 'startDebug':
                 await this.startDebugSession();
@@ -615,6 +622,14 @@ export class ApiConsolePanel {
      */
     private static normalizeProjectPath(projectPath: string): string {
         return path.normalize(projectPath).toLowerCase();
+    }
+
+    private static normalizeBaseUrl(baseUrl: string): string {
+        return baseUrl.trim().replace(/\/+$/, '').toLowerCase();
+    }
+
+    private static getProjectBearerTokenEntryKey(projectPath: string, baseUrl: string): string {
+        return `${ApiConsolePanel.normalizeProjectPath(projectPath)}|${ApiConsolePanel.normalizeBaseUrl(baseUrl)}`;
     }
 
     private matchesProjectPath(projectPath: string): boolean {
@@ -1163,6 +1178,80 @@ export class ApiConsolePanel {
         }
 
         this.baseUrlConfigManager.saveBaseUrls(this.currentProjectPath, baseUrls);
+    }
+
+    private async loadProjectBearerToken(payload?: unknown): Promise<void> {
+        if (!this.currentProjectPath) {
+            this.panel.webview.postMessage({
+                type: 'loadProjectBearerToken',
+                data: ''
+            });
+            return;
+        }
+
+        const baseUrl = payload && typeof payload === 'object' && typeof (payload as { baseUrl?: unknown }).baseUrl === 'string'
+            ? (payload as { baseUrl: string }).baseUrl
+            : '';
+
+        if (!baseUrl.trim()) {
+            this.panel.webview.postMessage({
+                type: 'loadProjectBearerToken',
+                data: ''
+            });
+            return;
+        }
+
+        const storedToken = this.baseUrlConfigManager.getBearerToken(this.currentProjectPath, baseUrl);
+        if (storedToken) {
+            this.panel.webview.postMessage({
+                type: 'loadProjectBearerToken',
+                data: storedToken
+            });
+            return;
+        }
+
+        const storedTokens = this.context.workspaceState.get<Record<string, string>>(
+            ApiConsolePanel.projectBearerTokenStorageKey,
+            {}
+        );
+
+        const scopedKey = ApiConsolePanel.getProjectBearerTokenEntryKey(this.currentProjectPath, baseUrl);
+        const legacyProjectKey = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+        this.panel.webview.postMessage({
+            type: 'loadProjectBearerToken',
+            data: storedTokens[scopedKey] || storedTokens[legacyProjectKey] || ''
+        });
+    }
+
+    private async saveProjectBearerToken(token: unknown): Promise<void> {
+        if (!this.currentProjectPath) {
+            return;
+        }
+
+        const payload = token && typeof token === 'object'
+            ? token as { baseUrl?: unknown; token?: unknown }
+            : undefined;
+        const baseUrl = typeof payload?.baseUrl === 'string' ? payload.baseUrl : '';
+        if (!baseUrl.trim()) {
+            return;
+        }
+
+        const trimmedToken = typeof payload?.token === 'string' ? payload.token.trim() : '';
+        this.baseUrlConfigManager.saveBearerToken(this.currentProjectPath, baseUrl, trimmedToken);
+
+        const storedTokens = {
+            ...this.context.workspaceState.get<Record<string, string>>(
+                ApiConsolePanel.projectBearerTokenStorageKey,
+                {}
+            )
+        };
+
+        const scopedKey = ApiConsolePanel.getProjectBearerTokenEntryKey(this.currentProjectPath, baseUrl);
+        const legacyProjectKey = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+        delete storedTokens[scopedKey];
+        delete storedTokens[legacyProjectKey];
+
+        await this.context.workspaceState.update(ApiConsolePanel.projectBearerTokenStorageKey, storedTokens);
     }
 
     /**

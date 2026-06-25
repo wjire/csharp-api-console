@@ -1,9 +1,33 @@
 # Changelog | 更新日志
 
-记录 C# API Console 的所有重要更新。  
+记录 C# API Console 的所有重要更新。
 All notable changes to this project will be documented in this file.
 
 ---
+
+## [1.1.2] - 2026-06-25
+
+### 中文
+
+#### Added
+
+- 在请求栏新增 Bearer Token 快捷入口：可直接管理当前项目 + 当前 Base URL 的 Bearer Token
+- 在 `Auth > Bearer` 页面新增保存按钮：可将当前输入框中的 Token 显式保存到当前项目 + 当前 Base URL
+
+#### Changed
+
+- Bearer Token 持久化规则调整：与 Base URL 管理共用 `.vscode/csharp-api-console-config.json`，按项目 + Base URL 维度存储，并在切换 Base URL 时自动回填
+
+### English
+
+#### Added
+
+- Added a Bearer Token quick entry in the request bar for managing the token of the current project + current Base URL
+- Added a save button in `Auth > Bearer` so the current textarea token can be explicitly saved to the current project + current Base URL
+
+#### Changed
+
+- Updated Bearer Token persistence to share `.vscode/csharp-api-console-config.json` with Base URL management, storing tokens by project + Base URL and restoring them automatically when switching Base URLs
 
 ## [1.1.1] - 2026-03-09
 
@@ -569,7 +593,7 @@ All notable changes to this project will be documented in this file.
 
 ## 反馈 | Feedback
 
-如有问题或建议，欢迎访问：  
+如有问题或建议，欢迎访问：
 For issues or suggestions, please visit:
 
 **GitHub**: https://github.com/wjire/csharp-api-console/issues

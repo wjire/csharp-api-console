@@ -1,6 +1,10 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+
+interface PersistedConfig {
+    baseUrls?: Record<string, string[]>;
+    bearerTokens?: Record<string, Record<string, string>>;
+}
 
 /**
  * Base URL 配置管理器
@@ -9,6 +13,7 @@ import * as path from 'path';
 export class BaseUrlConfigManager {
     private static readonly CONFIG_FILE_NAME = 'csharp-api-console-config.json';
     private configData: Record<string, string[]> = {}; // 内存中的配置数据
+    private bearerTokenData: Record<string, Record<string, string>> = {};
     private configFilePath: string;
     private writeTimer: NodeJS.Timeout | null = null;
     private readonly WRITE_DELAY = 500; // 防抖延迟（毫秒）
@@ -39,17 +44,24 @@ export class BaseUrlConfigManager {
     private loadConfigToMemory(): void {
         if (!fs.existsSync(this.configFilePath)) {
             this.configData = {};
+            this.bearerTokenData = {};
             return;
         }
 
         try {
             const content = fs.readFileSync(this.configFilePath, 'utf-8');
-            const config = JSON.parse(content);
+            const config = JSON.parse(content) as PersistedConfig;
             this.configData = config.baseUrls || {};
+            this.bearerTokenData = config.bearerTokens || {};
         } catch (error) {
             console.error('[BaseUrlConfigManager] Failed to load config:', error);
             this.configData = {};
+            this.bearerTokenData = {};
         }
+    }
+
+    private normalizeBaseUrlKey(baseUrl: string): string {
+        return baseUrl.trim().replace(/\/+$/, '');
     }
 
     /**
@@ -60,11 +72,53 @@ export class BaseUrlConfigManager {
     }
 
     /**
+     * 获取指定项目 + Base URL 对应的 Bearer Token（同步操作，从内存读取）
+     */
+    public getBearerToken(projectPath: string, baseUrl: string): string {
+        const normalizedBaseUrl = this.normalizeBaseUrlKey(baseUrl);
+        if (!normalizedBaseUrl) {
+            return '';
+        }
+
+        return this.bearerTokenData[projectPath]?.[normalizedBaseUrl] || '';
+    }
+
+    /**
      * 保存指定项目的 Base URLs（同步更新内存，异步写入文件）
      */
     public saveBaseUrls(projectPath: string, baseUrls: string[]): void {
         // 1. 同步更新内存
         this.configData[projectPath] = baseUrls;
+
+        // 2. 异步写入文件（防抖）
+        this.scheduleFileWrite();
+    }
+
+    /**
+     * 保存指定项目 + Base URL 对应的 Bearer Token（同步更新内存，异步写入文件）
+     */
+    public saveBearerToken(projectPath: string, baseUrl: string, token: string): void {
+        const normalizedBaseUrl = this.normalizeBaseUrlKey(baseUrl);
+        if (!normalizedBaseUrl) {
+            return;
+        }
+
+        const trimmedToken = token.trim();
+        const projectTokens = {
+            ...(this.bearerTokenData[projectPath] || {})
+        };
+
+        if (trimmedToken) {
+            projectTokens[normalizedBaseUrl] = trimmedToken;
+            this.bearerTokenData[projectPath] = projectTokens;
+        } else {
+            delete projectTokens[normalizedBaseUrl];
+            if (Object.keys(projectTokens).length > 0) {
+                this.bearerTokenData[projectPath] = projectTokens;
+            } else {
+                delete this.bearerTokenData[projectPath];
+            }
+        }
 
         // 2. 异步写入文件（防抖）
         this.scheduleFileWrite();
@@ -95,7 +149,10 @@ export class BaseUrlConfigManager {
         }
 
         try {
-            const config = { baseUrls: this.configData };
+            const config: PersistedConfig = {
+                baseUrls: this.configData,
+                bearerTokens: this.bearerTokenData
+            };
             fs.writeFileSync(this.configFilePath, JSON.stringify(config, null, 2), 'utf-8');
         } catch (error) {
             console.error('[BaseUrlConfigManager] Failed to write config:', error);
@@ -105,8 +162,11 @@ export class BaseUrlConfigManager {
     /**
      * 获取所有项目的配置（用于调试）
      */
-    public getAllConfig(): Record<string, string[]> {
-        return { ...this.configData };
+    public getAllConfig(): PersistedConfig {
+        return {
+            baseUrls: { ...this.configData },
+            bearerTokens: { ...this.bearerTokenData }
+        };
     }
 
     /**

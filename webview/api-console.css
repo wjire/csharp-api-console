@@ -327,6 +327,31 @@ body {
     opacity: 1;
 }
 
+.project-bearer-btn {
+    padding: 10px 12px;
+    background-color: transparent;
+    color: var(--vscode-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: all 0.2s;
+    line-height: 1.5;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+.project-bearer-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    opacity: 1;
+}
+
 .tabs {
     display: flex;
     border-bottom: 1px solid var(--vscode-panel-border);
@@ -1127,6 +1152,12 @@ body.vscode-light .body-editor::-moz-selection {
     font-family: 'Consolas', monospace;
 }
 
+.project-bearer-modal-input {
+    min-height: 140px;
+    resize: vertical;
+    margin-bottom: 0;
+}
+
 .modal-footer {
     display: flex;
     gap: 10px;
@@ -1309,6 +1340,33 @@ body.vscode-light .body-editor::-moz-selection {
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+}
+
+.auth-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.auth-actions-spacer {
+    flex: 1;
+}
+
+.auth-save-btn {
+    padding: 6px 14px;
+    background-color: transparent;
+    color: var(--vscode-button-foreground);
+    border: 1px solid var(--vscode-button-border, var(--vscode-button-background));
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.auth-save-btn:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
 }
 
 .bearer-token-label {
@@ -1526,6 +1584,7 @@ body.vscode-light .history-select,
 body.vscode-light .http-method,
 body.vscode-light .base-url-select,
 body.vscode-light .debug-button,
+body.vscode-light .project-bearer-btn,
 body.vscode-light .manage-baseurl-btn,
 body.vscode-light .param-input,
 body.vscode-light .formdata-input,
@@ -1539,7 +1598,8 @@ body.vscode-light .query-string-input,
 body.vscode-light .token-input,
 body.vscode-light .modal-input,
 body.vscode-light .base-url-item,
-body.vscode-light .bearer-token-input {
+body.vscode-light .bearer-token-input,
+body.vscode-light .auth-save-btn {
     border: 1px solid var(--api-light-border);
 }
 

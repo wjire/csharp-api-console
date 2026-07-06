@@ -17,8 +17,12 @@
         "semi": "off"
     },
     "ignorePatterns": [
+        "node_modules",
         "out",
         "dist",
+        "build",
+        "coverage",
+        "*.min.js",
         "**/*.d.ts"
     ]
 }

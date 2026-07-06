@@ -103,6 +103,7 @@ const TEXT_MAP = {
         'webview.history.placeholder': '历史记录',
         'webview.history.clear': '清空',
         'webview.history.cleared': '该接口历史记录已清空',
+        'webview.history.restoredResponse': '已恢复最近一次发送的响应结果',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',
@@ -203,6 +204,7 @@ const TEXT_MAP = {
         'webview.history.placeholder': 'Request History',
         'webview.history.clear': 'Clear',
         'webview.history.cleared': 'Endpoint history cleared',
+        'webview.history.restoredResponse': 'Restored response from the latest sent request',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',

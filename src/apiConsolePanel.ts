@@ -6,8 +6,13 @@ import { LaunchSettingsReader } from './launchSettingsReader';
 import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
-import { HttpClient } from './services/httpClient';
-import { RequestHistoryItem, RequestHistoryStore } from './services/requestHistoryStore';
+import { FormDataField, HttpClient, HttpResponse } from './services/httpClient';
+import {
+    RequestHistoryFormDataField,
+    RequestHistoryItem,
+    RequestHistoryResponseSnapshot,
+    RequestHistoryStore
+} from './services/requestHistoryStore';
 
 export interface OpenApiConsolePanelInfo {
     id: string;
@@ -24,6 +29,22 @@ export interface OpenApiConsolePanelInfo {
     debugStatus: 'idle' | 'running';
     createdOrder: number;
 }
+
+type ApiConsoleRequestData = {
+    method: string;
+    url: string;
+    baseUrl?: string;
+    headers: Record<string, string>;
+    token?: string;
+    body?: string;
+    path?: string;
+    query?: string;
+    bodyMode?: 'json' | 'formdata' | 'binary';
+    binaryBodyBase64?: string;
+    binaryContentType?: string;
+    binaryFileName?: string;
+    formDataFields?: FormDataField[];
+};
 
 /**
  * API 控制台面板
@@ -321,6 +342,9 @@ export class ApiConsolePanel {
             case 'requestBaseUrls':
                 await this.loadBaseUrls();
                 break;
+            case 'requestRequestHistory':
+                await this.loadRequestHistory(message.data?.baseUrl);
+                break;
             case 'saveBaseUrls':
                 await this.saveBaseUrls(message.data);
                 break;
@@ -334,7 +358,7 @@ export class ApiConsolePanel {
                 await this.startDebugSession();
                 break;
             case 'clearRequestHistory':
-                await this.clearRequestHistory();
+                await this.clearRequestHistory(message.data?.baseUrl);
                 break;
             case 'openResponseInEditor':
                 await this.openResponseInEditor(message.data?.content);
@@ -404,7 +428,6 @@ export class ApiConsolePanel {
         });
 
         await this.loadBaseUrls();
-        await this.loadRequestHistory();
         this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
     }
 
@@ -799,27 +822,7 @@ export class ApiConsolePanel {
     /**
      * 发送 HTTP 请求
      */
-    private async sendHttpRequest(requestData: {
-        method: string;
-        url: string;
-        headers: Record<string, string>;
-        token?: string;
-        body?: string;
-        path?: string;
-        query?: string;
-        bodyMode?: 'json' | 'formdata' | 'binary';
-        binaryBodyBase64?: string;
-        binaryContentType?: string;
-        binaryFileName?: string;
-        formDataFields?: Array<{
-            key: string;
-            type: 'text' | 'file';
-            value?: string;
-            valueBase64?: string;
-            fileName?: string;
-            contentType?: string;
-        }>;
-    }) {
+    private async sendHttpRequest(requestData: ApiConsoleRequestData) {
         // 使用 HttpClient 服务发送请求
         const response = await this.httpClient.sendRequest({
             ...requestData,
@@ -834,7 +837,7 @@ export class ApiConsolePanel {
             data: response
         });
 
-        await this.loadRequestHistory();
+        await this.loadRequestHistory(requestData.baseUrl);
     }
 
     private getHistoryLimit(): number {
@@ -903,19 +906,23 @@ export class ApiConsolePanel {
             .get<boolean>('requestHistorySaveBearerToken', false);
     }
 
-    private getCurrentEndpointKey(fallbackMethod?: string): string | null {
+    private getCurrentEndpointKey(baseUrl?: string, fallbackMethod?: string): string | null {
+        const normalizedBaseUrl = (baseUrl || '').trim();
         if (this.currentApiEndpoint) {
             const projectPath = this.currentApiEndpoint.projectPath
                 ? ApiConsolePanel.normalizeProjectPath(this.currentApiEndpoint.projectPath)
                 : '';
-            return `${projectPath}|${this.currentApiEndpoint.httpMethod}|${this.currentApiEndpoint.routeTemplate}`;
+            const method = (this.currentApiEndpoint.httpMethod || fallbackMethod || '').trim().toUpperCase();
+            const route = (this.currentApiEndpoint.routeTemplate || '').trim();
+            const action = (this.currentApiEndpoint.action || '').trim();
+            return `${projectPath}|${normalizedBaseUrl}|${method}|${route}|${action}`;
         }
 
         if (!fallbackMethod) {
             return null;
         }
 
-        return `fallback|${fallbackMethod.toUpperCase()}`;
+        return `fallback|${normalizedBaseUrl}|${fallbackMethod.toUpperCase()}`;
     }
 
     private extractPathAndQuery(url: string, pathFromRequest?: string, queryFromRequest?: string): { path: string; query: string } {
@@ -998,18 +1005,98 @@ export class ApiConsolePanel {
         }
     }
 
-    private async saveRequestHistory(
-        requestData: {
-            method: string;
-            url: string;
-            token?: string;
-            body?: string;
-            path?: string;
-            query?: string;
-        },
-        response: {
-            statusCode?: number;
+    private sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
+        const sensitiveKeyPattern = /^(authorization|cookie|set-cookie|token)$/i;
+        const sanitized: Record<string, string> = {};
+
+        Object.entries(headers || {}).forEach(([key, value]) => {
+            const trimmedKey = key.trim();
+            if (!trimmedKey) {
+                return;
+            }
+
+            if (sensitiveKeyPattern.test(trimmedKey)) {
+                return;
+            }
+
+            sanitized[trimmedKey] = String(value ?? '');
+        });
+
+        return sanitized;
+    }
+
+    private fitStringToHistoryLimit(value: string | undefined, maxBytes: number): string {
+        if (!value) {
+            return '';
         }
+
+        return Buffer.byteLength(value, 'utf8') > maxBytes ? '' : value;
+    }
+
+    private fitBase64ToHistoryLimit(valueBase64: string | undefined, maxBytes: number): string {
+        if (!valueBase64) {
+            return '';
+        }
+
+        try {
+            return Buffer.from(valueBase64, 'base64').length > maxBytes ? '' : valueBase64;
+        } catch {
+            return '';
+        }
+    }
+
+    private sanitizeFormDataFields(fields: FormDataField[] | undefined, maxBytes: number): RequestHistoryFormDataField[] | undefined {
+        if (!Array.isArray(fields)) {
+            return undefined;
+        }
+
+        const sensitiveKeyPattern = /token/i;
+        const sanitizedFields: RequestHistoryFormDataField[] = [];
+
+        for (const field of fields) {
+            const key = (field.key || '').trim();
+            if (!key) {
+                continue;
+            }
+
+            if (field.type === 'file') {
+                sanitizedFields.push({
+                    key,
+                    type: 'file',
+                    valueBase64: this.fitBase64ToHistoryLimit(field.valueBase64, maxBytes),
+                    fileName: field.fileName || '',
+                    contentType: field.contentType || 'application/octet-stream',
+                    enabled: true
+                });
+                continue;
+            }
+
+            sanitizedFields.push({
+                key,
+                type: 'text',
+                value: sensitiveKeyPattern.test(key) ? '***' : (field.value || ''),
+                enabled: true
+            });
+        }
+
+        return sanitizedFields;
+    }
+
+    private createResponseSnapshot(response: HttpResponse, maxBytes: number): RequestHistoryResponseSnapshot {
+        return {
+            success: response.success,
+            statusCode: typeof response.statusCode === 'number' ? response.statusCode : undefined,
+            headers: response.headers,
+            body: this.fitStringToHistoryLimit(response.body, maxBytes),
+            duration: response.duration,
+            error: response.error,
+            errorCode: response.errorCode
+        };
+    }
+
+    private async saveRequestHistory(
+        requestData: ApiConsoleRequestData,
+        response: HttpResponse
     ): Promise<void> {
         if (!this.isRequestHistoryEnabled()) {
             return;
@@ -1020,7 +1107,7 @@ export class ApiConsolePanel {
             requestData.path,
             requestData.query
         );
-        const endpointKey = this.getCurrentEndpointKey(requestData.method);
+        const endpointKey = this.getCurrentEndpointKey(requestData.baseUrl, requestData.method);
         if (!endpointKey) {
             return;
         }
@@ -1031,10 +1118,10 @@ export class ApiConsolePanel {
         const body = Buffer.byteLength(sanitizedBody, 'utf8') > maxBodyBytes
             ? ''
             : sanitizedBody;
-        const shouldSaveToken = this.shouldSaveBearerTokenInHistory();
-        const token = shouldSaveToken
-            ? (requestData.token?.trim() || '')
-            : '';
+        const token = requestData.token?.trim() || '';
+        const bodyMode = requestData.bodyMode === 'formdata' || requestData.bodyMode === 'binary'
+            ? requestData.bodyMode
+            : 'json';
 
         const item: RequestHistoryItem = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1042,13 +1129,24 @@ export class ApiConsolePanel {
             body,
             token,
             timestamp: Date.now(),
-            statusCode: typeof response.statusCode === 'number' ? response.statusCode : null
+            statusCode: typeof response.statusCode === 'number' ? response.statusCode : null,
+            headers: this.sanitizeHeaders(requestData.headers || {}),
+            bodyMode,
+            binaryBodyBase64: bodyMode === 'binary'
+                ? this.fitBase64ToHistoryLimit(requestData.binaryBodyBase64, maxBodyBytes)
+                : undefined,
+            binaryContentType: bodyMode === 'binary' ? requestData.binaryContentType : undefined,
+            binaryFileName: bodyMode === 'binary' ? requestData.binaryFileName : undefined,
+            formDataFields: bodyMode === 'formdata'
+                ? this.sanitizeFormDataFields(requestData.formDataFields, maxBodyBytes)
+                : undefined,
+            response: this.createResponseSnapshot(response, maxBodyBytes)
         };
 
         await this.requestHistoryStore.addHistory(endpointKey, item, this.getHistoryLimit());
     }
 
-    private async loadRequestHistory(): Promise<void> {
+    private async loadRequestHistory(baseUrl?: unknown): Promise<void> {
         if (!this.isRequestHistoryEnabled()) {
             this.panel.webview.postMessage({
                 type: 'requestHistoryLoaded',
@@ -1057,7 +1155,7 @@ export class ApiConsolePanel {
             return;
         }
 
-        const endpointKey = this.getCurrentEndpointKey();
+        const endpointKey = this.getCurrentEndpointKey(typeof baseUrl === 'string' ? baseUrl : undefined);
         if (!endpointKey) {
             this.panel.webview.postMessage({
                 type: 'requestHistoryLoaded',
@@ -1066,14 +1164,7 @@ export class ApiConsolePanel {
             return;
         }
 
-        const history = await this.requestHistoryStore.getHistory(endpointKey);
-        const shouldExposeToken = this.shouldSaveBearerTokenInHistory();
-        const historyForWebView = shouldExposeToken
-            ? history
-            : history.map(item => ({
-                ...item,
-                token: ''
-            }));
+        const historyForWebView = await this.requestHistoryStore.getHistory(endpointKey);
 
         this.panel.webview.postMessage({
             type: 'requestHistoryLoaded',
@@ -1081,7 +1172,7 @@ export class ApiConsolePanel {
         });
     }
 
-    private async clearRequestHistory(): Promise<void> {
+    private async clearRequestHistory(baseUrl?: unknown): Promise<void> {
         if (!this.isRequestHistoryEnabled()) {
             this.panel.webview.postMessage({
                 type: 'requestHistoryLoaded',
@@ -1090,7 +1181,7 @@ export class ApiConsolePanel {
             return;
         }
 
-        const endpointKey = this.getCurrentEndpointKey();
+        const endpointKey = this.getCurrentEndpointKey(typeof baseUrl === 'string' ? baseUrl : undefined);
         if (!endpointKey) {
             return;
         }

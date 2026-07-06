@@ -24,6 +24,28 @@
     let maxRenderLineNumbers = 2000;
     let jsonIndentSpaces = 2;
     let latestResponseText = '';
+    let hasUserEditedRequest = false;
+    let suppressRequestDirtyTracking = false;
+    let autoAppliedHistoryBaseUrl = null;
+    let tokenWasRestoredFromHistory = false;
+    let restoredBinaryBodyBase64 = '';
+    let restoredBinaryContentType = '';
+    let restoredBinaryFileName = '';
+
+    function markRequestDirty() {
+        if (!suppressRequestDirtyTracking) {
+            hasUserEditedRequest = true;
+        }
+    }
+
+    function withSuppressedDirtyTracking(callback) {
+        suppressRequestDirtyTracking = true;
+        try {
+            callback();
+        } finally {
+            suppressRequestDirtyTracking = false;
+        }
+    }
 
     function getBodyModePanelId(mode) {
         if (mode === 'formdata') {
@@ -115,6 +137,7 @@
         }
 
         updateBaseUrlSelectWidth();
+        requestHistoryForCurrentBaseUrl();
     }
 
     function updateBaseUrlSelectWidth() {
@@ -432,8 +455,54 @@
         clearButton.disabled = requestHistory.length === 0;
     }
 
+    function normalizeHistoryRecord(record) {
+        if (!record || typeof record !== 'object') {
+            return null;
+        }
+
+        if (typeof record.id !== 'string' || !record.id || typeof record.timestamp !== 'number') {
+            return null;
+        }
+
+        const normalized = {
+            ...record,
+            query: typeof record.query === 'string' ? record.query : '',
+            body: typeof record.body === 'string' ? record.body : '',
+            token: typeof record.token === 'string' ? record.token : '',
+            statusCode: typeof record.statusCode === 'number' ? record.statusCode : null,
+            headers: record.headers && typeof record.headers === 'object' && !Array.isArray(record.headers)
+                ? record.headers
+                : {},
+            bodyMode: record.bodyMode === 'formdata' || record.bodyMode === 'binary' ? record.bodyMode : 'json',
+            response: record.response && typeof record.response === 'object' ? record.response : undefined
+        };
+
+        if (Array.isArray(record.formDataFields)) {
+            normalized.formDataFields = record.formDataFields
+                .filter(field => field && typeof field === 'object' && typeof field.key === 'string' && field.key)
+                .map(field => ({
+                    key: field.key,
+                    type: field.type === 'file' ? 'file' : 'text',
+                    value: typeof field.value === 'string' ? field.value : '',
+                    valueBase64: typeof field.valueBase64 === 'string' ? field.valueBase64 : '',
+                    fileName: typeof field.fileName === 'string' ? field.fileName : '',
+                    contentType: typeof field.contentType === 'string' ? field.contentType : '',
+                    enabled: field.enabled === false ? false : true
+                }));
+        } else {
+            normalized.formDataFields = [];
+        }
+
+        normalized.binaryBodyBase64 = typeof record.binaryBodyBase64 === 'string' ? record.binaryBodyBase64 : '';
+        normalized.binaryContentType = typeof record.binaryContentType === 'string' ? record.binaryContentType : '';
+        normalized.binaryFileName = typeof record.binaryFileName === 'string' ? record.binaryFileName : '';
+
+        return normalized;
+    }
+
     function applyHistoryRecord(record) {
-        if (!record) {
+        const normalizedRecord = normalizeHistoryRecord(record);
+        if (!normalizedRecord) {
             return;
         }
 
@@ -441,25 +510,59 @@
         const bodyEditor = document.getElementById('bodyEditor');
         const queryList = document.getElementById('queryList');
         const tokenInput = document.getElementById('tokenInput');
+        const headersList = document.getElementById('headersList');
+        const formDataList = document.getElementById('formDataList');
 
-        if (queryStringInput) {
-            queryStringInput.value = record.query || '';
-        }
+        withSuppressedDirtyTracking(() => {
+            if (headersList) {
+                headersList.innerHTML = '';
+                Object.entries(normalizedRecord.headers || {}).forEach(([key, value]) => {
+                    addHeaderRow(key, String(value ?? ''));
+                });
+            }
 
-        if (queryList) {
-            queryList.innerHTML = '';
-        }
+            if (queryStringInput) {
+                queryStringInput.value = normalizedRecord.query || '';
+            }
 
-        if (bodyEditor) {
-            bodyEditor.value = formatJsonBodyIfPossible(record.body || '');
-            updateBodyEditorVisualState();
-        }
+            if (queryList) {
+                queryList.innerHTML = '';
+            }
 
-        if (tokenInput) {
-            tokenInput.value = record.token || projectBearerToken || '';
-        }
+            if (tokenInput) {
+                const restoredToken = normalizedRecord.token || projectBearerToken || '';
+                tokenInput.value = restoredToken;
+                tokenWasRestoredFromHistory = Boolean(normalizedRecord.token);
+            }
 
-        activateBodyMode('json');
+            restoredBinaryBodyBase64 = normalizedRecord.binaryBodyBase64 || '';
+            restoredBinaryContentType = normalizedRecord.binaryContentType || '';
+            restoredBinaryFileName = normalizedRecord.binaryFileName || '';
+
+            if (normalizedRecord.bodyMode === 'formdata') {
+                if (formDataList) {
+                    formDataList.innerHTML = '';
+                }
+                const fields = normalizedRecord.formDataFields.length > 0
+                    ? normalizedRecord.formDataFields
+                    : [{}];
+                fields.forEach(field => addFormDataRow(field));
+                activateBodyMode('formdata');
+            } else if (normalizedRecord.bodyMode === 'binary') {
+                activateBodyMode('binary');
+                updateBinaryFileNameDisplay();
+            } else {
+                if (bodyEditor) {
+                    bodyEditor.value = formatJsonBodyIfPossible(normalizedRecord.body || '');
+                    updateBodyEditorVisualState();
+                }
+                activateBodyMode('json');
+            }
+
+            if (normalizedRecord.response) {
+                displayResponse(normalizedRecord.response, { restored: true });
+            }
+        });
     }
 
 
@@ -474,7 +577,7 @@
         projectBearerToken = typeof token === 'string' ? token : '';
 
         const tokenInput = document.getElementById('tokenInput');
-        if (tokenInput) {
+        if (tokenInput && !tokenWasRestoredFromHistory) {
             tokenInput.value = projectBearerToken;
         }
     }
@@ -493,9 +596,22 @@
         });
     }
 
+    function requestHistoryForCurrentBaseUrl() {
+        vscode.postMessage({
+            type: 'requestRequestHistory',
+            data: {
+                baseUrl: getCurrentBaseUrl().trim()
+            }
+        });
+    }
+
     document.getElementById('baseUrlSelect')?.addEventListener('change', () => {
         updateBaseUrlSelectWidth();
+        hasUserEditedRequest = false;
+        autoAppliedHistoryBaseUrl = null;
+        tokenWasRestoredFromHistory = false;
         requestBearerTokenForCurrentBaseUrl();
+        requestHistoryForCurrentBaseUrl();
     });
 
     function closeProjectBearerTokenModal() {
@@ -577,13 +693,15 @@
         updateBaseUrlSelectWidth();
     });
 
-    document.getElementById('addHeaderBtn')?.addEventListener('click', addHeaderRow);
+    document.getElementById('addHeaderBtn')?.addEventListener('click', () => addHeaderRow());
     document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
     document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
     document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
     document.getElementById('formatJsonBtn')?.addEventListener('click', formatJsonEditorContent);
     document.getElementById('bodyEditor')?.addEventListener('input', updateBodyEditorVisualState);
     document.getElementById('bodyEditor')?.addEventListener('scroll', syncBodyEditorHighlightScroll);
+    document.querySelector('.request-section')?.addEventListener('input', markRequestDirty);
+    document.querySelector('.request-section')?.addEventListener('change', markRequestDirty);
     document.getElementById('historySelect')?.addEventListener('change', () => {
         const historySelect = document.getElementById('historySelect');
         const selectedId = historySelect?.value;
@@ -595,12 +713,16 @@
         const selectedRecord = requestHistory.find(item => item.id === selectedId);
         if (selectedRecord) {
             applyHistoryRecord(selectedRecord);
+            hasUserEditedRequest = false;
         }
     });
 
     document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
         vscode.postMessage({
-            type: 'clearRequestHistory'
+            type: 'clearRequestHistory',
+            data: {
+                baseUrl: getCurrentBaseUrl().trim()
+            }
         });
     });
 
@@ -721,6 +843,9 @@
         const fieldType = initialData.type === 'file' ? 'file' : 'text';
         row.className = 'formdata-row';
         row.dataset.fieldType = fieldType;
+        row.dataset.valueBase64 = typeof initialData.valueBase64 === 'string' ? initialData.valueBase64 : '';
+        row.dataset.fileName = typeof initialData.fileName === 'string' ? initialData.fileName : '';
+        row.dataset.contentType = typeof initialData.contentType === 'string' ? initialData.contentType : '';
 
         row.innerHTML = `
             <div class="formdata-enabled-wrap">
@@ -767,7 +892,7 @@
         }
 
         const selectedFile = fileInput.files?.[0];
-        fileNameElement.textContent = selectedFile?.name || t('bodyMode.noFile');
+        fileNameElement.textContent = selectedFile?.name || row.dataset.fileName || t('bodyMode.noFile');
     }
 
     function addFormDataRow(initialData = {}) {
@@ -824,16 +949,16 @@
             if (fieldType === 'file') {
                 const fileInput = row.querySelector('.formdata-file-input');
                 const file = fileInput?.files?.[0];
-                if (!file) {
+                if (!file && !row.dataset.valueBase64) {
                     continue;
                 }
 
-                const valueBase64 = await fileToBase64(file);
+                const valueBase64 = file ? await fileToBase64(file) : row.dataset.valueBase64;
                 fields.push({
                     key,
                     type: 'file',
-                    fileName: file.name,
-                    contentType: file.type || 'application/octet-stream',
+                    fileName: file?.name || row.dataset.fileName || 'upload.bin',
+                    contentType: file?.type || row.dataset.contentType || 'application/octet-stream',
                     valueBase64
                 });
                 continue;
@@ -873,7 +998,7 @@
         }
 
         const selectedFile = binaryFileInput.files?.[0];
-        binaryFileName.textContent = selectedFile?.name || t('bodyMode.noFile');
+        binaryFileName.textContent = selectedFile?.name || restoredBinaryFileName || t('bodyMode.noFile');
     }
 
     function updateDebugButton() {
@@ -903,6 +1028,9 @@
     });
 
     document.getElementById('binaryFileInput')?.addEventListener('change', () => {
+        restoredBinaryBodyBase64 = '';
+        restoredBinaryContentType = '';
+        restoredBinaryFileName = '';
         updateBinaryFileNameDisplay();
 
         updateJsonValidityIndicator();
@@ -954,13 +1082,13 @@
     });
 
     // Add header row
-    function addHeaderRow() {
+    function addHeaderRow(key = '', value = '') {
         const list = document.getElementById('headersList');
         const row = document.createElement('div');
         row.className = 'param-row';
         row.innerHTML = `
-                <input type="text" class="param-input" placeholder="${t('placeholder.key')}" />
-                <input type="text" class="param-input" placeholder="${t('placeholder.value')}" />
+                <input type="text" class="param-input" placeholder="${t('placeholder.key')}" value="${escapeHtml(key)}" />
+                <input type="text" class="param-input" placeholder="${t('placeholder.value')}" value="${escapeHtml(value)}" />
                 <button class="remove-button" type="button">${t('remove') || ''}</button>
             `;
         list.appendChild(row);
@@ -1130,6 +1258,10 @@
                     binaryBodyBase64 = await fileToBase64(selectedFile);
                     binaryContentType = selectedFile.type || undefined;
                     binaryFileName = selectedFile.name || undefined;
+                } else if (restoredBinaryBodyBase64) {
+                    binaryBodyBase64 = restoredBinaryBodyBase64;
+                    binaryContentType = restoredBinaryContentType || undefined;
+                    binaryFileName = restoredBinaryFileName || undefined;
                 }
             } else if (currentBodyMode === 'formdata') {
                 formDataFields = await collectFormDataFields();
@@ -1154,6 +1286,7 @@
             data: {
                 method,
                 url: finalUrl,
+                baseUrl,
                 headers,
                 token,
                 body,
@@ -1329,6 +1462,8 @@
                 break;
             case 'requestComplete':
                 displayResponse(message.data);
+                hasUserEditedRequest = false;
+                autoAppliedHistoryBaseUrl = getCurrentBaseUrl().trim();
                 break;
             case 'updateApiEndpoint':
                 updateApiEndpoint(message.data);
@@ -1343,8 +1478,21 @@
                 break;
             }
             case 'requestHistoryLoaded':
-                requestHistory = Array.isArray(message.data) ? message.data : [];
+                requestHistory = Array.isArray(message.data)
+                    ? message.data.map(normalizeHistoryRecord).filter(Boolean)
+                    : [];
                 renderRequestHistory();
+                if (requestHistory.length > 0
+                    && !hasUserEditedRequest
+                    && autoAppliedHistoryBaseUrl !== getCurrentBaseUrl().trim()) {
+                    const latestRecord = requestHistory[0];
+                    applyHistoryRecord(latestRecord);
+                    const historySelect = document.getElementById('historySelect');
+                    if (historySelect) {
+                        historySelect.value = latestRecord.id;
+                    }
+                    autoAppliedHistoryBaseUrl = getCurrentBaseUrl().trim();
+                }
                 break;
             case 'renderSettings': {
                 const settings = message.data || {};
@@ -1388,11 +1536,18 @@
         currentApiEndpoint = apiEndpoint;
         currentDebugState = 'idle';
         projectBearerToken = '';
+        hasUserEditedRequest = false;
+        autoAppliedHistoryBaseUrl = null;
+        tokenWasRestoredFromHistory = false;
+        restoredBinaryBodyBase64 = '';
+        restoredBinaryContentType = '';
+        restoredBinaryFileName = '';
         updateDebugButton();
         requestHistory = [];
         renderRequestHistory();
 
         setCurrentBearerToken('');
+        resetResponseDisplay();
 
         // Update HTTP method and URL
         const methodElement = document.getElementById('httpMethod');
@@ -1643,10 +1798,30 @@
         latestResponseText = '';
     }
 
+    function resetResponseDisplay() {
+        document.getElementById('statusValue').textContent = '-';
+        document.getElementById('statusValue').className = 'status-value';
+        document.getElementById('sizeValue').textContent = '-';
+        document.getElementById('timeValue').textContent = '-';
+        document.getElementById('responseBody').innerHTML = '';
+        document.getElementById('lineNumbers').innerHTML = '';
+        document.getElementById('headerCount').textContent = '0';
+        document.getElementById('responseHeaders').innerHTML = '';
+        latestResponseText = '';
+    }
+
     // Display response
-    function displayResponse(data) {
+    function displayResponse(data, options = {}) {
+        if (!data || typeof data !== 'object') {
+            resetResponseDisplay();
+            return;
+        }
+
         // Re-enable send button
         document.getElementById('sendButton').disabled = false;
+        const restoredNotice = options.restored
+            ? `<span style="color: var(--vscode-descriptionForeground); font-style: italic;">${escapeHtml(t('history.restoredResponse') || 'Restored from latest request history.')}</span>\n\n`
+            : '';
 
         if (data.success) {
             // Update status
@@ -1656,20 +1831,21 @@
             statusValue.className = data.statusCode >= 200 && data.statusCode < 300 ? 'status-value' : 'status-value error';
 
             // Update size
-            const bodySize = new Blob([data.body]).size;
+            const rawBody = typeof data.body === 'string' ? data.body : '';
+            const bodySize = new Blob([rawBody]).size;
             document.getElementById('sizeValue').textContent = bodySize + ' Bytes';
 
             // Update time
-            document.getElementById('timeValue').textContent = data.duration + ' ms';
+            document.getElementById('timeValue').textContent = Number.isFinite(data.duration) ? data.duration + ' ms' : '-';
 
             const isLargeResponse = bodySize >= largeResponseThresholdBytes;
-            let formattedBody = data.body;
+            let formattedBody = rawBody;
             let responseHtml = '';
 
             if (isLargeResponse) {
                 const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
                 renderLineNumbers(lineCount);
-                responseHtml = `<span style="color: var(--vscode-descriptionForeground);">Large response detected. Rendered in plain text mode for performance.</span>\n\n${escapeHtml(formattedBody)}`;
+                responseHtml = `${restoredNotice}<span style="color: var(--vscode-descriptionForeground);">Large response detected. Rendered in plain text mode for performance.</span>\n\n${escapeHtml(formattedBody)}`;
             } else {
                 try {
                     const jsonObj = JSON.parse(data.body);
@@ -1681,7 +1857,7 @@
                 const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
                 renderLineNumbers(lineCount);
 
-                responseHtml = highlightJSON(formattedBody);
+                responseHtml = restoredNotice + highlightJSON(formattedBody);
             }
 
             latestResponseText = formattedBody;
@@ -1713,10 +1889,10 @@
             statusValue.className = 'status-value error';
 
             document.getElementById('sizeValue').textContent = '-';
-            document.getElementById('timeValue').textContent = data.duration + ' ms';
+            document.getElementById('timeValue').textContent = Number.isFinite(data.duration) ? data.duration + ' ms' : '-';
 
             // Display error in response body
-            document.getElementById('responseBody').innerHTML = escapeHtml(data.error);
+            document.getElementById('responseBody').innerHTML = restoredNotice + escapeHtml(data.error || '');
             latestResponseText = typeof data.error === 'string' ? data.error : String(data.error || '');
             renderLineNumbers(1);
 

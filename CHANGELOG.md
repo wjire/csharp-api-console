@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.3] - 2026-07-06
+
+### 中文
+
+#### Added
+
+- 测试面板会按当前项目 + Base URL + 接口自动保存最近一次请求输入，并在重新打开时恢复 Auth（含 Bearer）、Headers、Query、Body 和响应结果
+
+### English
+
+#### Added
+
+- Test panels now save the latest request input per current project + Base URL + endpoint, restoring Auth (including Bearer), Headers, Query, Body, and response results when reopened
+
 ## [1.1.2] - 2026-06-25
 
 ### 中文

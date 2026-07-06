@@ -59,6 +59,7 @@ out/
 *.cache
 *.dbmdl
 *.localhistory
+.env*
 
 ## ==================== 发布和部署 ====================
 *.publishsettings

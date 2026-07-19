@@ -29,6 +29,9 @@ const TEXT_MAP = {
         'webview.save': '保存',
         'webview.delete': '删除',
         'webview.remove': '移除',
+        'webview.backToAction': '返回',
+        'webview.backToActionUnavailable': '当前接口无法定位到 Action 代码位置',
+        'webview.backToActionFailed': '返回 Action 位置失败',
         'webview.debug.start': '启动调试',
         'webview.debug.starting': '启动中...',
         'webview.debug.running': '调试中',
@@ -61,6 +64,14 @@ const TEXT_MAP = {
         'webview.bodyMode.formDataClearDisabled': '清理未启用项',
         'webview.bodyMode.formDataClearFile': '清空',
         'webview.bodyMode.formDataEmpty': 'FormData 没有可发送的有效字段',
+        'webview.bodyMode.mock': 'Mock',
+        'webview.bodyMode.mocking': '生成中...',
+        'webview.bodyMode.mockLoadedSwaggerUrl': '已根据运行中的 Swagger 地址生成 Mock 数据',
+        'webview.bodyMode.mockFailed': '未能从 Swagger 生成 Mock 数据',
+        'webview.bodyMode.mockNoEndpoint': '当前接口信息不可用，无法生成 Mock 数据',
+        'webview.bodyMode.mockNotSupportedMethod': 'GET 请求不需要生成 Body',
+        'webview.bodyMode.mockConfirmOverwrite': 'Body 已有内容，是否用 Mock 结果覆盖？',
+        'webview.bodyMode.mockSkipWhenBodyExists': 'Body 已有内容。如需生成 Mock，请先清空 Body。',
         'webview.bodyMode.formatJson': '格式化',
         'webview.bodyMode.invalidJson': 'JSON 无效',
         'webview.bodyMode.binaryFile': '二进制文件',
@@ -76,8 +87,8 @@ const TEXT_MAP = {
         'webview.placeholder.value': 'Value',
         'webview.placeholder.parameter': 'parameter',
         'webview.placeholder.baseUrlInput': 'https://api.example.com',
-        'webview.placeholder.queryString': '粘贴查询字符串（如 ?id=1&name=dankit，? 可选）。优先使用这里的参数，如果为空则使用下面添加的参数',
-
+        'webview.placeholder.queryString': '粘贴 URL 或查询字符串（如 ?id=1&name=dankit，? 可选），将自动同步到下方参数行；编辑下方参数行也会同步到这里',
+        'webview.query.parseFailed': '未识别到有效查询参数',
         // WebView - 状态栏
         'webview.status.label': '状态:',
         'webview.size.label': '大小:',
@@ -85,25 +96,12 @@ const TEXT_MAP = {
         'webview.status.sending': '正在发送...',
         'webview.response.copyOpen': '打开',
         'webview.response.empty': '暂无响应内容可打开',
-        'webview.hub.current': '当前',
-        'webview.hub.empty': '暂无已打开的测试面板。',
-        'webview.hub.panelMissing': '测试面板不存在，可能已被关闭。',
 
         // WebView - Base URL 管理
         'webview.baseUrl.manage': '管理 Base URLs',
         'webview.baseUrl.add': '+ 添加 Base URL',
         'webview.baseUrl.empty': '暂无 Base URL，点击"+ 添加 Base URL"添加一个',
         'webview.baseUrl.saved': 'Base URLs 已保存',
-        'webview.projectBearer.quickEntry': 'Base URL Bearer Token',
-        'webview.projectBearer.title': '保存当前项目 + 当前 Base URL 的 Bearer Token',
-        'webview.projectBearer.saveAction': '保存到当前项目 + 当前 Base URL',
-        'webview.projectBearer.saved': '当前项目 + 当前 Base URL 的 Bearer Token 已保存',
-        'webview.projectBearer.cleared': '当前项目 + 当前 Base URL 的 Bearer Token 已清空',
-        'webview.projectBearer.noBaseUrl': '请先选择 Base URL',
-        'webview.history.placeholder': '历史记录',
-        'webview.history.clear': '清空',
-        'webview.history.cleared': '该接口历史记录已清空',
-        'webview.history.restoredResponse': '已恢复最近一次发送的响应结果',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',
@@ -114,6 +112,16 @@ const TEXT_MAP = {
         'webview.error.requestFailed': '请求失败',
         'webview.error.invalidJson': 'JSON 格式错误',
         'webview.error.networkError': '网络错误',
+
+        // Mock Service - 错误信息
+        'mock.error.missingHttpMethod': '缺少 HTTP 方法。',
+        'mock.error.missingRouteTemplate': '缺少路由模板。',
+        'mock.error.missingSwaggerBaseUrl': '缺少用于获取 Swagger 的 Base URL。',
+        'mock.error.swaggerMatchedNoSchema': '已匹配到 Swagger 接口，但没有可用于生成 Mock 数据的 query/body/form-data schema。',
+        'mock.error.unableToLoadSchema': '无法从 Swagger 地址加载 Mock schema：{0}',
+        'mock.error.invalidUrl': 'URL 无效。',
+        'mock.error.requestTimedOut': '请求超时。',
+        'mock.error.httpStatus': 'HTTP 请求失败：{0}',
     },
     'en': {
         // Common
@@ -130,6 +138,9 @@ const TEXT_MAP = {
         'webview.save': 'Save',
         'webview.delete': 'Delete',
         'webview.remove': 'Remove',
+        'webview.backToAction': 'Back',
+        'webview.backToActionUnavailable': 'Cannot locate the action source for current API',
+        'webview.backToActionFailed': 'Failed to navigate back to action source',
         'webview.debug.start': 'Start Debug',
         'webview.debug.starting': 'Starting...',
         'webview.debug.running': 'Debug Running',
@@ -162,6 +173,14 @@ const TEXT_MAP = {
         'webview.bodyMode.formDataClearDisabled': 'Clear Disabled',
         'webview.bodyMode.formDataClearFile': 'Clear',
         'webview.bodyMode.formDataEmpty': 'FormData has no valid fields',
+        'webview.bodyMode.mock': 'Mock',
+        'webview.bodyMode.mocking': 'Mocking...',
+        'webview.bodyMode.mockLoadedSwaggerUrl': 'Mock body generated from running Swagger endpoint',
+        'webview.bodyMode.mockFailed': 'Failed to generate mock data from Swagger',
+        'webview.bodyMode.mockNoEndpoint': 'No API endpoint available for mock generation',
+        'webview.bodyMode.mockNotSupportedMethod': 'GET request does not need body mock',
+        'webview.bodyMode.mockConfirmOverwrite': 'Body already has content. Replace with mock body?',
+        'webview.bodyMode.mockSkipWhenBodyExists': 'Body already has content. Clear it first if you want to generate mock body.',
         'webview.bodyMode.formatJson': 'Format',
         'webview.bodyMode.invalidJson': 'Invalid JSON',
         'webview.bodyMode.binaryFile': 'Binary File',
@@ -177,8 +196,8 @@ const TEXT_MAP = {
         'webview.placeholder.value': 'Value',
         'webview.placeholder.parameter': 'parameter',
         'webview.placeholder.baseUrlInput': 'https://api.example.com',
-        'webview.placeholder.queryString': 'Paste query string (e.g., ?id=1&name=dankit, ? optional). Parameters here take priority, fallback to manual list if empty',
-
+        'webview.placeholder.queryString': 'Paste a URL or query string (e.g., ?id=1&name=dankit, ? optional). It will auto-sync to rows below, and row edits will sync back here',
+        'webview.query.parseFailed': 'No valid query parameters found',
         // WebView - Status Bar
         'webview.status.label': 'Status:',
         'webview.size.label': 'Size:',
@@ -186,25 +205,12 @@ const TEXT_MAP = {
         'webview.status.sending': 'Sending...',
         'webview.response.copyOpen': 'Open',
         'webview.response.empty': 'No response content to open',
-        'webview.hub.current': 'Current',
-        'webview.hub.empty': 'No open test panels.',
-        'webview.hub.panelMissing': 'Test panel not found. It may have been closed.',
 
         // WebView - Base URL Management
         'webview.baseUrl.manage': 'Manage Base URLs',
         'webview.baseUrl.add': '+ Add Base URL',
         'webview.baseUrl.empty': 'No Base URLs yet. Click "+ Add Base URL" to add one.',
         'webview.baseUrl.saved': 'Base URLs saved',
-        'webview.projectBearer.quickEntry': 'Base URL Bearer Token',
-        'webview.projectBearer.title': 'Save Bearer Token For Current Project + Current Base URL',
-        'webview.projectBearer.saveAction': 'Save To Current Project + Current Base URL',
-        'webview.projectBearer.saved': 'Bearer token for the current project + current Base URL saved',
-        'webview.projectBearer.cleared': 'Bearer token for the current project + current Base URL cleared',
-        'webview.projectBearer.noBaseUrl': 'Please select a Base URL first',
-        'webview.history.placeholder': 'Request History',
-        'webview.history.clear': 'Clear',
-        'webview.history.cleared': 'Endpoint history cleared',
-        'webview.history.restoredResponse': 'Restored response from the latest sent request',
 
         // WebView - Auth
         'webview.auth.bearer': 'Bearer',
@@ -215,6 +221,16 @@ const TEXT_MAP = {
         'webview.error.requestFailed': 'Request failed',
         'webview.error.invalidJson': 'Invalid JSON format',
         'webview.error.networkError': 'Network error',
+
+        // Mock Service - Error Messages
+        'mock.error.missingHttpMethod': 'Missing HTTP method.',
+        'mock.error.missingRouteTemplate': 'Missing route template.',
+        'mock.error.missingSwaggerBaseUrl': 'Missing base URL for Swagger fetch.',
+        'mock.error.swaggerMatchedNoSchema': 'Swagger endpoint matched, but no query/body/form-data schema is available for mock generation.',
+        'mock.error.unableToLoadSchema': 'Unable to load mock schema from Swagger URL(s): {0}',
+        'mock.error.invalidUrl': 'Invalid URL.',
+        'mock.error.requestTimedOut': 'Request timed out.',
+        'mock.error.httpStatus': 'HTTP request failed: {0}',
     }
 };
 

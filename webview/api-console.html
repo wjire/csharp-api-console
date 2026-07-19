@@ -16,23 +16,18 @@
         <!-- 顶部请求栏 -->
         <div class="header-section">
             <div class="url-section">
-                <div class="http-method" id="httpMethod">GET</div>
-                <div class="base-url-container">
-                    <select class="base-url-select" id="baseUrlSelect">
-                        <option value="">Select Base URL</option>
-                    </select>
-                </div>
-                <input type="text" class="route-input" id="routeInput" placeholder="/api/route" />
+                <button class="back-button" id="backToActionBtn">Back</button>
                 <button class="debug-button" id="debugButton">Debug</button>
                 <button class="send-button" id="sendButton">Send</button>
-                <button class="project-bearer-btn" id="projectBearerTokenBtn" title="Project Bearer Token">🔑</button>
-                <button class="manage-baseurl-btn" id="manageBaseUrlBtn" title="Manage Base URLs">⚙️</button>
-                <div class="history-section">
-                    <select class="history-select" id="historySelect">
-                        <option value="">History</option>
-                    </select>
-                    <button class="remove-button" id="clearHistoryBtn" type="button">Clear</button>
+                <div class="http-method" id="httpMethod">GET</div>
+                <div class="base-url-container">
+                    <input type="text" class="base-url-input" id="baseUrlInput"
+                        placeholder="Select Base URL" autocomplete="off" />
+                    <button type="button" class="base-url-dropdown-toggle" id="baseUrlDropdownToggle"
+                        aria-label="Toggle base URL list" title="Toggle base URL list">▾</button>
+                    <div class="base-url-dropdown" id="baseUrlDropdown"></div>
                 </div>
+                <input type="text" class="route-input" id="routeInput" placeholder="/api/route" />
             </div>
         </div>
 
@@ -46,6 +41,8 @@
                         <div class="tab" data-tab="auth">Auth</div>
                         <div class="tab" data-tab="headers">Headers</div>
                         <div class="tab" data-tab="query">Query</div>
+                        <div class="tabs-spacer"></div>
+                        <button type="button" class="tab-mock-button" id="mockAllBtn">Mock</button>
                     </div>
 
                     <div id="bodyTab" class="tab-content active">
@@ -111,10 +108,6 @@
 
                         <div class="auth-content">
                             <div class="auth-section active" id="authBearer">
-                                <div class="auth-actions">
-                                    <div class="auth-actions-spacer"></div>
-                                    <button type="button" class="auth-save-btn" id="saveBearerTokenFromAuthBtn">保存</button>
-                                </div>
                                 <!-- <label class="bearer-token-label">Bearer Token</label> -->
                                 <textarea class="bearer-token-input" id="tokenInput"
                                     placeholder="token (Bearer prefix optional)"></textarea>
@@ -123,21 +116,30 @@
                     </div>
 
                     <div id="headersTab" class="tab-content">
-                        <div class="param-list" id="headersList">
-                            <!-- Headers will be populated by JavaScript -->
+                        <div class="headers-rows-area" id="headersRowsArea">
+                            <div class="param-list" id="headersList">
+                                <!-- Headers will be populated by JavaScript -->
+                            </div>
+                            <button class="add-button" id="addHeaderBtn">Add</button>
                         </div>
-                        <button class="add-button" id="addHeaderBtn">Add</button>
                     </div>
 
                     <div id="queryTab" class="tab-content">
-                        <textarea class="query-string-input" id="queryStringInput"></textarea>
-                        <div class="param-list" id="queryList">
-                            <!-- Query parameters will be populated by JavaScript -->
+                        <div class="query-quick-input-row">
+                            <textarea class="query-quick-input" id="queryQuickInput"
+                                placeholder="Paste query string, e.g. ?id=1&name=dankit"></textarea>
                         </div>
-                        <button class="add-button" id="addQueryBtn">Add</button>
+                        <div class="query-rows-area" id="queryRowsArea">
+                            <div class="param-list" id="queryList">
+                                <!-- Query parameters will be populated by JavaScript -->
+                            </div>
+                            <button class="add-button" id="addQueryBtn">Add</button>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="panel-splitter" id="panelSplitter" role="separator" aria-label="Resize panels" aria-orientation="vertical"></div>
 
             <div class="right-panel">
                 <div class="response-section">
@@ -188,37 +190,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Base URL Management Modal -->
-    <div class="modal" id="manageBaseUrlModal">
-        <div class="modal-content" style="width: 600px; max-width: 95%;">
-            <div class="modal-body">
-                <div class="base-url-list" id="baseUrlListContainer">
-                    <!-- Base URL 列表将动态生成 -->
-                </div>
-                <button class="add-button" id="addNewBaseUrlBtn" style="width: 100%; margin-top: 10px;">+ Add Base
-                    URL</button>
-            </div>
-            <div class="modal-footer">
-                <button class="icon-btn cancel" id="cancelManageBtn" title="Cancel">✕</button>
-                <button class="icon-btn save" id="saveManageBtn" title="Save">✓</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="projectBearerTokenModal">
-        <div class="modal-content" style="width: 520px; max-width: 95%;">
-            <div class="modal-header" id="projectBearerTokenModalTitle">Project Bearer Token</div>
-            <div class="modal-body">
-                <textarea class="modal-input project-bearer-modal-input" id="projectBearerTokenModalInput"
-                    placeholder="token (Bearer prefix optional)"></textarea>
-            </div>
-            <div class="modal-footer">
-                <button class="icon-btn cancel" id="cancelProjectBearerTokenBtn" title="Cancel">✕</button>
-                <button class="icon-btn save" id="saveProjectBearerTokenBtn" title="Save">✓</button>
             </div>
         </div>
     </div>

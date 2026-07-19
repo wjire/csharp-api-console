@@ -14,23 +14,23 @@
     let currentApiEndpoint = null;
     let savedBaseUrls = []; // 存储用户保存的 base URLs
     let defaultBaseUrl = ''; // 默认的 base URL (来自 launchSettings.json)
-    let projectBearerToken = ''; // 当前 Base URL 对应的 Bearer Token
-    let tempBaseUrls = []; // 临时编辑中的 base URLs
     let currentBodyMode = 'json';
-    let baseUrlMeasureCanvas = null;
     let currentDebugState = 'idle';
-    let requestHistory = [];
     let largeResponseThresholdBytes = 1024 * 1024;
     let maxRenderLineNumbers = 2000;
     let jsonIndentSpaces = 2;
     let latestResponseText = '';
     let hasUserEditedRequest = false;
     let suppressRequestDirtyTracking = false;
-    let autoAppliedHistoryBaseUrl = null;
-    let tokenWasRestoredFromHistory = false;
+    let queryQuickApplyTimer = null;
+    let queryRowsSyncTimer = null;
+    let suppressQueryQuickInputAutoApply = false;
     let restoredBinaryBodyBase64 = '';
     let restoredBinaryContentType = '';
     let restoredBinaryFileName = '';
+    let isMockAllLoading = false;
+    let activeBaseUrlOptionIndex = -1;
+    let panelSplitRatio = 0.5;
 
     function markRequestDirty() {
         if (!suppressRequestDirtyTracking) {
@@ -45,6 +45,100 @@
         } finally {
             suppressRequestDirtyTracking = false;
         }
+    }
+
+    function applyPanelSplitRatio() {
+        const mainContent = document.querySelector('.main-content');
+        const leftPanel = document.querySelector('.left-panel');
+        const rightPanel = document.querySelector('.right-panel');
+        if (!mainContent || !leftPanel || !rightPanel) {
+            return;
+        }
+
+        if (window.innerWidth <= 949) {
+            leftPanel.style.flex = '';
+            rightPanel.style.flex = '';
+            leftPanel.style.width = '';
+            rightPanel.style.width = '';
+            return;
+        }
+
+        const splitterWidth = 8;
+        const containerWidth = mainContent.clientWidth;
+        const availableWidth = Math.max(containerWidth - splitterWidth, 0);
+        const minPanelWidth = 320;
+
+        const minRatio = availableWidth > 0 ? Math.min(0.45, minPanelWidth / availableWidth) : 0.2;
+        const maxRatio = availableWidth > 0 ? Math.max(0.55, 1 - (minPanelWidth / availableWidth)) : 0.8;
+        const safeMinRatio = Math.max(0.15, Math.min(minRatio, 0.5));
+        const safeMaxRatio = Math.min(0.85, Math.max(maxRatio, 0.5));
+
+        panelSplitRatio = Math.max(safeMinRatio, Math.min(safeMaxRatio, panelSplitRatio));
+
+        const leftWidth = Math.round(availableWidth * panelSplitRatio);
+        const rightWidth = Math.max(availableWidth - leftWidth, 0);
+
+        leftPanel.style.flex = '0 0 auto';
+        rightPanel.style.flex = '0 0 auto';
+        leftPanel.style.width = `${leftWidth}px`;
+        rightPanel.style.width = `${rightWidth}px`;
+    }
+
+    function initializePanelSplitter() {
+        const mainContent = document.querySelector('.main-content');
+        const splitter = document.getElementById('panelSplitter');
+        if (!mainContent || !splitter) {
+            return;
+        }
+
+        let dragging = false;
+
+        const handlePointerMove = (event) => {
+            if (!dragging || window.innerWidth <= 949) {
+                return;
+            }
+
+            const rect = mainContent.getBoundingClientRect();
+            const splitterWidth = 8;
+            const availableWidth = Math.max(rect.width - splitterWidth, 0);
+            if (availableWidth <= 0) {
+                return;
+            }
+
+            const rawLeftWidth = event.clientX - rect.left;
+            const minPanelWidth = 320;
+            const clampedLeft = Math.max(minPanelWidth, Math.min(rawLeftWidth, availableWidth - minPanelWidth));
+            panelSplitRatio = clampedLeft / availableWidth;
+            applyPanelSplitRatio();
+        };
+
+        const stopDragging = () => {
+            if (!dragging) {
+                return;
+            }
+
+            dragging = false;
+            splitter.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            document.removeEventListener('pointermove', handlePointerMove);
+            document.removeEventListener('pointerup', stopDragging);
+        };
+
+        splitter.addEventListener('pointerdown', (event) => {
+            if (window.innerWidth <= 949) {
+                return;
+            }
+
+            event.preventDefault();
+            dragging = true;
+            splitter.classList.add('dragging');
+            document.body.style.userSelect = 'none';
+            document.addEventListener('pointermove', handlePointerMove);
+            document.addEventListener('pointerup', stopDragging);
+        });
+
+        window.addEventListener('resize', applyPanelSplitRatio);
+        applyPanelSplitRatio();
     }
 
     function getBodyModePanelId(mode) {
@@ -79,6 +173,8 @@
     vscode.postMessage({ type: 'webviewReady' });
     // 注意：不再主动请求 baseUrls，后端会在初始化完成后主动发送
 
+    initializePanelSplitter();
+
     // 响应体全选功能
     const responseBodyWrapper = document.getElementById('responseBodyWrapper');
     const bodyPanel = document.getElementById('bodyPanel');
@@ -108,110 +204,223 @@
 
     // === Base URL Management ===
 
-    // Load and render base URLs in the select dropdown
-    function renderBaseUrls() {
-        const select = document.getElementById('baseUrlSelect');
-        select.innerHTML = '';
-
-        // 总是先添加默认URL（来自 launchSettings.json）并设置为第一个选项
-        if (defaultBaseUrl) {
-            const option = document.createElement('option');
-            option.value = defaultBaseUrl;
-            option.textContent = `${defaultBaseUrl}`;
-            option.dataset.isDefault = 'true';
-            select.appendChild(option);
+    function normalizeBaseUrl(baseUrl) {
+        const trimmed = typeof baseUrl === 'string' ? baseUrl.trim() : '';
+        if (!trimmed) {
+            return '';
         }
 
-        // 然后添加用户保存的 base URLs
-        savedBaseUrls.forEach((url, index) => {
-            const option = document.createElement('option');
-            option.value = url;
-            option.textContent = url;
-            option.dataset.index = index;
-            select.appendChild(option);
+        return trimmed.replace(/\/+$/, '');
+    }
+
+    function normalizeBaseUrlKey(baseUrl) {
+        return normalizeBaseUrl(baseUrl).toLowerCase();
+    }
+
+    function getMergedBaseUrls() {
+        const merged = [];
+        const keys = new Set();
+
+        const pushUnique = (value) => {
+            const normalized = normalizeBaseUrl(value);
+            if (!normalized) {
+                return;
+            }
+
+            const key = normalizeBaseUrlKey(normalized);
+            if (keys.has(key)) {
+                return;
+            }
+
+            keys.add(key);
+            merged.push(normalized);
+        };
+
+        pushUnique(defaultBaseUrl);
+        savedBaseUrls.forEach(pushUnique);
+
+        return merged;
+    }
+
+    function getNormalizedSavedBaseUrls() {
+        const unique = [];
+        const keys = new Set();
+
+        savedBaseUrls.forEach((value) => {
+            const normalized = normalizeBaseUrl(value);
+            if (!normalized) {
+                return;
+            }
+
+            const key = normalizeBaseUrlKey(normalized);
+            if (keys.has(key)) {
+                return;
+            }
+
+            keys.add(key);
+            unique.push(normalized);
         });
 
-        // 默认选中第一个选项（launchSettings.json 的 URL）
-        if (select.options.length > 0) {
-            select.selectedIndex = 0;
-        }
-
-        updateBaseUrlSelectWidth();
-        requestHistoryForCurrentBaseUrl();
+        return unique;
     }
 
-    function updateBaseUrlSelectWidth() {
-        const select = document.getElementById('baseUrlSelect');
-        const container = document.querySelector('.base-url-container');
-        if (!select || !container) {
+    function getBaseUrlDropdownElements() {
+        return {
+            input: document.getElementById('baseUrlInput'),
+            dropdown: document.getElementById('baseUrlDropdown')
+        };
+    }
+
+    function getRenderedBaseUrlOptions() {
+        const { dropdown } = getBaseUrlDropdownElements();
+        if (!dropdown) {
+            return [];
+        }
+
+        return Array.from(dropdown.querySelectorAll('.base-url-dropdown-option'));
+    }
+
+    function closeBaseUrlDropdown() {
+        const { dropdown } = getBaseUrlDropdownElements();
+        if (!dropdown) {
             return;
         }
 
-        const selectedText = select.options.length > 0
-            ? (select.options[select.selectedIndex]?.text || select.value || '')
-            : (t('placeholder.baseUrl') || 'Select Base URL');
+        dropdown.classList.remove('show');
+        activeBaseUrlOptionIndex = -1;
+    }
 
-        const computedStyle = window.getComputedStyle(select);
-        const canvas = baseUrlMeasureCanvas || (baseUrlMeasureCanvas = document.createElement('canvas'));
-        const context = canvas.getContext('2d');
-        if (!context) {
+    function updateActiveBaseUrlOption() {
+        const options = getRenderedBaseUrlOptions();
+        options.forEach((option, index) => {
+            option.classList.toggle('active', index === activeBaseUrlOptionIndex);
+        });
+
+        if (activeBaseUrlOptionIndex < 0 || activeBaseUrlOptionIndex >= options.length) {
             return;
         }
 
-        context.font = computedStyle.font;
-        const textWidth = context.measureText(selectedText).width;
-
-        const minWidth = 160;
-        const maxWidth = 500;
-        const horizontalSpace = 56;
-        const targetWidth = Math.ceil(textWidth + horizontalSpace);
-        const finalWidth = Math.max(minWidth, Math.min(maxWidth, targetWidth));
-
-        container.style.width = `${finalWidth}px`;
+        options[activeBaseUrlOptionIndex].scrollIntoView({ block: 'nearest' });
     }
 
-    // Render base URL list in management modal
-    function renderBaseUrlList() {
-        const container = document.getElementById('baseUrlListContainer');
+    function selectBaseUrlOption(baseUrl) {
+        setCurrentBaseUrl(baseUrl);
+        closeBaseUrlDropdown();
+        hasUserEditedRequest = false;
+        requestRequestStateForCurrentBaseUrl();
+    }
 
-        if (tempBaseUrls.length === 0) {
-            container.innerHTML = `<p style="color: var(--vscode-descriptionForeground); text-align: center; padding: 20px;">${t('baseUrl.empty')}</p>`;
+    function removeSavedBaseUrl(baseUrl) {
+        const normalizedKey = normalizeBaseUrlKey(baseUrl);
+        if (!normalizedKey) {
             return;
         }
 
-        container.innerHTML = tempBaseUrls.map((url, index) => `
-                <div class="base-url-item">
-                    <input type="text" class="base-url-item-input" value="${escapeHtml(url)}" data-index="${index}" placeholder="${t('placeholder.baseUrlInput')}" />
-                    <div class="base-url-item-actions">
-                        <button class="base-url-item-btn delete" data-index="${index}" title="${t('delete')}">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
+        const nextSavedBaseUrls = savedBaseUrls.filter(item => normalizeBaseUrlKey(item) !== normalizedKey);
+        if (nextSavedBaseUrls.length === savedBaseUrls.length) {
+            return;
+        }
+
+        const currentKey = normalizeBaseUrlKey(getCurrentBaseUrl());
+        savedBaseUrls = nextSavedBaseUrls;
+
+        vscode.postMessage({
+            type: 'saveBaseUrls',
+            data: savedBaseUrls
+        });
+
+        renderBaseUrls();
+        openBaseUrlDropdown();
+
+        if (currentKey === normalizedKey) {
+            const fallbackBaseUrl = getMergedBaseUrls()[0] || '';
+            setCurrentBaseUrl(fallbackBaseUrl);
+            requestRequestStateForCurrentBaseUrl();
+        }
     }
 
-    // Event delegation for base URL list buttons
-    document.getElementById('baseUrlListContainer').addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.classList.contains('delete')) {
-            const index = parseInt(target.getAttribute('data-index'));
-            deleteBaseUrlDirect(index);
+    function renderBaseUrlDropdownOptions() {
+        const { dropdown } = getBaseUrlDropdownElements();
+        if (!dropdown) {
+            return;
         }
-    });
 
-    // Event delegation for input changes
-    document.getElementById('baseUrlListContainer').addEventListener('input', (e) => {
-        const target = e.target;
-        if (target.classList.contains('base-url-item-input')) {
-            const index = parseInt(target.getAttribute('data-index'));
-            tempBaseUrls[index] = target.value;
+        const mergedUrls = getNormalizedSavedBaseUrls();
+        dropdown.innerHTML = '';
+
+        mergedUrls.forEach((url) => {
+            const option = document.createElement('div');
+            option.className = 'base-url-dropdown-option';
+            option.dataset.value = url;
+
+            const label = document.createElement('span');
+            label.className = 'base-url-dropdown-label';
+            label.textContent = url;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'base-url-dropdown-delete';
+            deleteBtn.textContent = t('remove') || 'Delete';
+            deleteBtn.title = t('remove') || 'Delete';
+            deleteBtn.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            deleteBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                removeSavedBaseUrl(url);
+            });
+
+            option.appendChild(label);
+            option.appendChild(deleteBtn);
+            option.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+            });
+            option.addEventListener('click', () => {
+                selectBaseUrlOption(url);
+            });
+            dropdown.appendChild(option);
+        });
+
+        activeBaseUrlOptionIndex = -1;
+    }
+
+    function openBaseUrlDropdown() {
+        const { dropdown } = getBaseUrlDropdownElements();
+        if (!dropdown) {
+            return;
         }
-    });
 
-    // Delete base URL directly (no confirmation)
-    function deleteBaseUrlDirect(index) {
-        if (index >= 0 && index < tempBaseUrls.length) {
-            tempBaseUrls.splice(index, 1);
-            renderBaseUrlList();
+        renderBaseUrlDropdownOptions();
+        if (!dropdown.children.length) {
+            closeBaseUrlDropdown();
+            return;
+        }
+
+        dropdown.classList.add('show');
+    }
+
+    // Load and render base URLs in the combo box
+    function renderBaseUrls() {
+        const { input } = getBaseUrlDropdownElements();
+        if (!input) {
+            return;
+        }
+
+        const mergedUrls = getMergedBaseUrls();
+        renderBaseUrlDropdownOptions();
+
+        const currentValue = normalizeBaseUrl(input.value);
+        if (currentValue) {
+            input.value = currentValue;
+            return;
+        }
+
+        if (mergedUrls.length > 0) {
+            input.value = mergedUrls[0];
+        } else {
+            input.value = '';
         }
     }
 
@@ -224,59 +433,6 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
     }
-
-    // Open management modal
-    document.getElementById('manageBaseUrlBtn').addEventListener('click', () => {
-        // Copy current saved URLs to temp for editing
-        tempBaseUrls = [...savedBaseUrls];
-        renderBaseUrlList();
-        document.getElementById('manageBaseUrlModal').classList.add('show');
-    });
-
-    // Cancel management modal (discard changes)
-    document.getElementById('cancelManageBtn').addEventListener('click', () => {
-        document.getElementById('manageBaseUrlModal').classList.remove('show');
-        tempBaseUrls = [];
-    });
-
-    // Save management modal (apply changes)
-    document.getElementById('saveManageBtn').addEventListener('click', () => {
-        // Filter out empty URLs and trim
-        savedBaseUrls = tempBaseUrls
-            .map(url => url.trim())
-            .filter(url => url.length > 0);
-
-        // Save to extension
-        vscode.postMessage({
-            type: 'saveBaseUrls',
-            data: savedBaseUrls
-        });
-
-        // Re-render select dropdown
-        renderBaseUrls();
-
-        // Close modal
-        document.getElementById('manageBaseUrlModal').classList.remove('show');
-        tempBaseUrls = [];
-
-        // Show success message
-        showToast(t('baseUrl.saved'), 'success');
-    });
-
-    // Add new base URL
-    document.getElementById('addNewBaseUrlBtn').addEventListener('click', () => {
-        tempBaseUrls.push(''); // Add empty string at the end
-        renderBaseUrlList();
-        // Focus on the last input
-        setTimeout(() => {
-            const inputs = document.querySelectorAll('.base-url-item-input');
-            if (inputs.length > 0) {
-                const lastInput = inputs[inputs.length - 1];
-                lastInput.focus();
-                lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }, 0);
-    });
 
     // Show toast notification
     function showToast(message, type = 'info') {
@@ -300,32 +456,6 @@
                 container.removeChild(toast);
             }, 300);
         }, 3000);
-    }
-
-    function formatHistoryTimestamp(timestamp) {
-        const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) {
-            return '-';
-        }
-
-        const now = new Date();
-        const sameDay = date.getFullYear() === now.getFullYear()
-            && date.getMonth() === now.getMonth()
-            && date.getDate() === now.getDate();
-
-        const pad = (value) => String(value).padStart(2, '0');
-        const timePart = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-
-        if (sameDay) {
-            return timePart;
-        }
-
-        return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${timePart}`;
-    }
-
-    function formatHistoryStatus(statusCode) {
-        const rawStatus = statusCode === null || statusCode === undefined ? '--' : String(statusCode);
-        return rawStatus.padStart(3, '\u00A0');
     }
 
     function formatJsonBodyIfPossible(bodyText) {
@@ -425,276 +555,521 @@
         }
     }
 
-    function renderRequestHistory() {
-        const historySelect = document.getElementById('historySelect');
-        const clearButton = document.getElementById('clearHistoryBtn');
+    // Get current selected base URL
+    function getCurrentBaseUrl() {
+        const input = document.getElementById('baseUrlInput');
+        if (!input) {
+            return '';
+        }
 
-        if (!historySelect || !clearButton) {
+        return normalizeBaseUrl(input.value);
+    }
+
+    function setCurrentBaseUrl(baseUrl) {
+        const input = document.getElementById('baseUrlInput');
+        if (!input) {
             return;
         }
 
-        const previousValue = historySelect.value;
-        historySelect.innerHTML = '';
+        const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+        if (!normalizedBaseUrl) {
+            return;
+        }
 
-        const placeholderOption = document.createElement('option');
-        placeholderOption.value = '';
-        placeholderOption.textContent = t('history.placeholder') || 'Request History';
-        historySelect.appendChild(placeholderOption);
+        input.value = normalizedBaseUrl;
+    }
 
-        requestHistory.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            const statusCode = formatHistoryStatus(item.statusCode);
-            option.textContent = `[${statusCode}] ${formatHistoryTimestamp(item.timestamp)}`;
-            historySelect.appendChild(option);
+    function requestRequestStateForCurrentBaseUrl() {
+        const baseUrl = getCurrentBaseUrl().trim();
+        if (!baseUrl) {
+            return;
+        }
+
+        vscode.postMessage({
+            type: 'requestRequestState',
+            data: {
+                baseUrl
+            }
+        });
+    }
+
+    function ensureCurrentBaseUrlSaved(baseUrl) {
+        const normalized = normalizeBaseUrl(baseUrl);
+        if (!normalized) {
+            return;
+        }
+
+        const normalizedKey = normalizeBaseUrlKey(normalized);
+        const existsInSaved = savedBaseUrls.some(item => normalizeBaseUrlKey(item) === normalizedKey);
+        const isDefault = normalizeBaseUrlKey(defaultBaseUrl) === normalizedKey;
+        if (existsInSaved || isDefault) {
+            return;
+        }
+
+        savedBaseUrls = [...savedBaseUrls, normalized];
+        vscode.postMessage({
+            type: 'saveBaseUrls',
+            data: savedBaseUrls
+        });
+        renderBaseUrls();
+    }
+
+    function normalizeBearerTokenForHeader(token) {
+        const trimmedToken = typeof token === 'string' ? token.trim() : '';
+        if (!trimmedToken) {
+            return '';
+        }
+
+        return trimmedToken.toLowerCase().startsWith('bearer ')
+            ? trimmedToken
+            : `Bearer ${trimmedToken}`;
+    }
+
+    function buildRestoredHeaders(headers, token) {
+        const tokenHeader = normalizeBearerTokenForHeader(token);
+        return Object.entries(headers || {}).filter(([key, value]) => {
+            if (!tokenHeader) {
+                return true;
+            }
+
+            const isAuthorization = String(key || '').trim().toLowerCase() === 'authorization';
+            if (!isAuthorization) {
+                return true;
+            }
+
+            return String(value ?? '').trim() !== tokenHeader;
+        });
+    }
+
+    function parseQueryEntries(query) {
+        const rawQuery = typeof query === 'string' ? query.trim() : '';
+        if (!rawQuery) {
+            return [];
+        }
+
+        let cleanQuery = rawQuery;
+        const queryStartIndex = cleanQuery.indexOf('?');
+        if (queryStartIndex >= 0) {
+            cleanQuery = cleanQuery.substring(queryStartIndex + 1);
+        }
+        if (cleanQuery.startsWith('?')) {
+            cleanQuery = cleanQuery.substring(1);
+        }
+        const hashIndex = cleanQuery.indexOf('#');
+        if (hashIndex >= 0) {
+            cleanQuery = cleanQuery.substring(0, hashIndex);
+        }
+
+        if (!cleanQuery.trim()) {
+            return [];
+        }
+
+        try {
+            const params = new URLSearchParams(cleanQuery);
+            const entries = [];
+            params.forEach((value, key) => {
+                entries.push({ key, value });
+            });
+            return entries;
+        } catch {
+            return [];
+        }
+    }
+
+    function collectQueryEntriesFromRows() {
+        const entries = [];
+        document.querySelectorAll('#queryList .param-row').forEach(row => {
+            const inputs = row.querySelectorAll('.param-input');
+            const key = (inputs[0]?.value || '').trim();
+            const value = (inputs[1]?.value || '').trim();
+            if (key) {
+                entries.push({ key, value });
+            }
+        });
+        return entries;
+    }
+
+    function buildQueryStringFromEntries(entries) {
+        if (!Array.isArray(entries) || entries.length === 0) {
+            return '';
+        }
+
+        return entries
+            .map(entry => `${entry.key}=${entry.value}`)
+            .join('&');
+    }
+
+    function toReadableQueryString(query) {
+        const entries = parseQueryEntries(query);
+        return buildQueryStringFromEntries(entries);
+    }
+
+    function setQueryQuickInputValue(nextValue) {
+        const queryQuickInput = document.getElementById('queryQuickInput');
+        if (!queryQuickInput) {
+            return;
+        }
+
+        const normalizedValue = typeof nextValue === 'string' ? nextValue : '';
+        if (queryQuickInput.value === normalizedValue) {
+            return;
+        }
+
+        suppressQueryQuickInputAutoApply = true;
+        queryQuickInput.value = normalizedValue;
+        suppressQueryQuickInputAutoApply = false;
+    }
+
+    function syncQueryQuickInputFromRows() {
+        const queryEntries = collectQueryEntriesFromRows();
+        setQueryQuickInputValue(buildQueryStringFromEntries(queryEntries));
+    }
+
+    function clearQueryRowsSyncTimer() {
+        if (queryRowsSyncTimer !== null) {
+            clearTimeout(queryRowsSyncTimer);
+            queryRowsSyncTimer = null;
+        }
+    }
+
+    function scheduleQueryQuickSyncFromRows() {
+        clearQueryRowsSyncTimer();
+        queryRowsSyncTimer = setTimeout(() => {
+            queryRowsSyncTimer = null;
+            syncQueryQuickInputFromRows();
+        }, 180);
+    }
+
+    function renderQueryRowsFromEntries(entries) {
+        const queryList = document.getElementById('queryList');
+        if (!queryList) {
+            return;
+        }
+
+        queryList.innerHTML = '';
+        entries.forEach(({ key, value }) => {
+            addQueryRow(key, value);
+        });
+    }
+
+    function mergeQueryEntriesKeepingManual(existingEntries, mockEntries) {
+        const mergedEntries = Array.isArray(existingEntries)
+            ? existingEntries.map(item => ({
+                key: typeof item?.key === 'string' ? item.key : '',
+                value: typeof item?.value === 'string' ? item.value : String(item?.value ?? '')
+            }))
+            : [];
+
+        const normalizeKey = (key) => String(key || '').trim().toLowerCase();
+
+        mockEntries.forEach((mockEntry) => {
+            const mockKey = typeof mockEntry?.key === 'string' ? mockEntry.key.trim() : '';
+            if (!mockKey) {
+                return;
+            }
+
+            const mockKeyNormalized = normalizeKey(mockKey);
+            const matchedIndex = mergedEntries.findIndex(item => normalizeKey(item.key) === mockKeyNormalized);
+
+            if (matchedIndex >= 0) {
+                // Keep user-provided value for existing key; only add missing keys from mock.
+                return;
+            }
+
+            const mockValue = typeof mockEntry?.value === 'string'
+                ? mockEntry.value
+                : String(mockEntry?.value ?? '');
+
+            mergedEntries.push({
+                key: mockKey,
+                value: mockValue
+            });
         });
 
-        const hasPrevious = requestHistory.some(item => item.id === previousValue);
-        historySelect.value = hasPrevious ? previousValue : '';
-
-        clearButton.disabled = requestHistory.length === 0;
+        return mergedEntries.filter(item => String(item.key || '').trim().length > 0);
     }
 
-    function normalizeHistoryRecord(record) {
-        if (!record || typeof record !== 'object') {
-            return null;
-        }
+    function collectFormDataEntriesFromRows() {
+        const rows = document.querySelectorAll('#formDataList .formdata-row');
+        const entries = [];
 
-        if (typeof record.id !== 'string' || !record.id || typeof record.timestamp !== 'number') {
-            return null;
-        }
+        rows.forEach((row) => {
+            const key = row.querySelector('.formdata-key')?.value?.trim();
+            if (!key) {
+                return;
+            }
 
-        const normalized = {
-            ...record,
-            query: typeof record.query === 'string' ? record.query : '',
-            body: typeof record.body === 'string' ? record.body : '',
-            token: typeof record.token === 'string' ? record.token : '',
-            statusCode: typeof record.statusCode === 'number' ? record.statusCode : null,
-            headers: record.headers && typeof record.headers === 'object' && !Array.isArray(record.headers)
-                ? record.headers
-                : {},
-            bodyMode: record.bodyMode === 'formdata' || record.bodyMode === 'binary' ? record.bodyMode : 'json',
-            response: record.response && typeof record.response === 'object' ? record.response : undefined
-        };
+            const value = row.querySelector('.formdata-value-input')?.value ?? '';
+            entries.push({
+                key,
+                value: String(value),
+                type: 'text',
+                enabled: row.querySelector('.formdata-enabled')?.checked !== false
+            });
+        });
 
-        if (Array.isArray(record.formDataFields)) {
-            normalized.formDataFields = record.formDataFields
-                .filter(field => field && typeof field === 'object' && typeof field.key === 'string' && field.key)
-                .map(field => ({
-                    key: field.key,
-                    type: field.type === 'file' ? 'file' : 'text',
-                    value: typeof field.value === 'string' ? field.value : '',
-                    valueBase64: typeof field.valueBase64 === 'string' ? field.valueBase64 : '',
-                    fileName: typeof field.fileName === 'string' ? field.fileName : '',
-                    contentType: typeof field.contentType === 'string' ? field.contentType : '',
-                    enabled: field.enabled === false ? false : true
-                }));
-        } else {
-            normalized.formDataFields = [];
-        }
-
-        normalized.binaryBodyBase64 = typeof record.binaryBodyBase64 === 'string' ? record.binaryBodyBase64 : '';
-        normalized.binaryContentType = typeof record.binaryContentType === 'string' ? record.binaryContentType : '';
-        normalized.binaryFileName = typeof record.binaryFileName === 'string' ? record.binaryFileName : '';
-
-        return normalized;
+        return entries;
     }
 
-    function applyHistoryRecord(record) {
-        const normalizedRecord = normalizeHistoryRecord(record);
-        if (!normalizedRecord) {
+    function mergeFormDataEntriesKeepingManual(existingEntries, mockEntries) {
+        const mergedEntries = Array.isArray(existingEntries)
+            ? existingEntries.map(item => ({
+                key: typeof item?.key === 'string' ? item.key : '',
+                value: typeof item?.value === 'string' ? item.value : String(item?.value ?? ''),
+                type: 'text',
+                enabled: item?.enabled !== false
+            }))
+            : [];
+
+        const normalizeKey = (key) => String(key || '').trim().toLowerCase();
+
+        mockEntries.forEach((mockEntry) => {
+            const mockKey = typeof mockEntry?.key === 'string' ? mockEntry.key.trim() : '';
+            if (!mockKey) {
+                return;
+            }
+
+            const mockValue = typeof mockEntry?.value === 'string'
+                ? mockEntry.value
+                : String(mockEntry?.value ?? '');
+            const mockKeyNormalized = normalizeKey(mockKey);
+            const matchedIndex = mergedEntries.findIndex(item => normalizeKey(item.key) === mockKeyNormalized);
+
+            if (matchedIndex >= 0) {
+                mergedEntries[matchedIndex] = {
+                    ...mergedEntries[matchedIndex],
+                    key: mergedEntries[matchedIndex].key,
+                    value: mockValue,
+                    type: 'text',
+                    enabled: true
+                };
+                return;
+            }
+
+            mergedEntries.push({
+                key: mockKey,
+                value: mockValue,
+                type: 'text',
+                enabled: true
+            });
+        });
+
+        return mergedEntries.filter(item => String(item.key || '').trim().length > 0);
+    }
+
+    function renderFormDataRowsFromEntries(entries) {
+        const formDataList = document.getElementById('formDataList');
+        if (!formDataList) {
             return;
         }
 
-        const queryStringInput = document.getElementById('queryStringInput');
-        const bodyEditor = document.getElementById('bodyEditor');
-        const queryList = document.getElementById('queryList');
-        const tokenInput = document.getElementById('tokenInput');
-        const headersList = document.getElementById('headersList');
-        const formDataList = document.getElementById('formDataList');
+        formDataList.innerHTML = '';
+        entries.forEach((entry) => {
+            addFormDataRow({
+                key: entry.key,
+                value: entry.value,
+                type: 'text',
+                enabled: entry.enabled !== false
+            });
+        });
+
+        ensureFormDataHasAtLeastOneRow();
+    }
+
+    function applyQueryQuickInput(options = {}) {
+        const quickInput = document.getElementById('queryQuickInput');
+        if (!quickInput) {
+            return;
+        }
+
+        const shouldNotifyOnEmpty = options.notifyOnEmpty !== false;
+        const shouldMarkDirty = options.markDirty !== false;
+        const entries = parseQueryEntries(quickInput.value || '');
+        renderQueryRowsFromEntries(entries);
+        if (shouldMarkDirty) {
+            hasUserEditedRequest = entries.length > 0;
+        }
+
+        if (!entries.length && shouldNotifyOnEmpty) {
+            showToast(t('query.parseFailed') || 'No valid query parameters found', 'info');
+        }
+    }
+
+    function clearQueryQuickApplyTimer() {
+        if (queryQuickApplyTimer !== null) {
+            clearTimeout(queryQuickApplyTimer);
+            queryQuickApplyTimer = null;
+        }
+    }
+
+    function scheduleQueryQuickAutoApply() {
+        clearQueryQuickApplyTimer();
+        queryQuickApplyTimer = setTimeout(() => {
+            queryQuickApplyTimer = null;
+            applyQueryQuickInput({ notifyOnEmpty: false, markDirty: true });
+        }, 260);
+    }
+
+    function applyRequestState(state) {
+        if (!state || typeof state !== 'object') {
+            return;
+        }
 
         withSuppressedDirtyTracking(() => {
+            if (typeof state.baseUrl === 'string' && state.baseUrl.trim()) {
+                setCurrentBaseUrl(state.baseUrl);
+            }
+
+            const restoredToken = typeof state.token === 'string' ? state.token : '';
+
+            const tokenInput = document.getElementById('tokenInput');
+            if (tokenInput) {
+                tokenInput.value = restoredToken;
+            }
+
+            const headersList = document.getElementById('headersList');
             if (headersList) {
                 headersList.innerHTML = '';
-                Object.entries(normalizedRecord.headers || {}).forEach(([key, value]) => {
+                buildRestoredHeaders(state.headers, restoredToken).forEach(([key, value]) => {
                     addHeaderRow(key, String(value ?? ''));
                 });
             }
 
-            if (queryStringInput) {
-                queryStringInput.value = normalizedRecord.query || '';
-            }
-
+            const queryList = document.getElementById('queryList');
             if (queryList) {
-                queryList.innerHTML = '';
+                renderQueryRowsFromEntries(parseQueryEntries(state.query));
             }
+            setQueryQuickInputValue(toReadableQueryString(state.query));
 
-            if (tokenInput) {
-                const restoredToken = normalizedRecord.token || projectBearerToken || '';
-                tokenInput.value = restoredToken;
-                tokenWasRestoredFromHistory = Boolean(normalizedRecord.token);
-            }
+            restoredBinaryBodyBase64 = typeof state.binaryBodyBase64 === 'string' ? state.binaryBodyBase64 : '';
+            restoredBinaryContentType = typeof state.binaryContentType === 'string' ? state.binaryContentType : '';
+            restoredBinaryFileName = typeof state.binaryFileName === 'string' ? state.binaryFileName : '';
 
-            restoredBinaryBodyBase64 = normalizedRecord.binaryBodyBase64 || '';
-            restoredBinaryContentType = normalizedRecord.binaryContentType || '';
-            restoredBinaryFileName = normalizedRecord.binaryFileName || '';
-
-            if (normalizedRecord.bodyMode === 'formdata') {
+            if (state.bodyMode === 'formdata') {
+                const formDataList = document.getElementById('formDataList');
                 if (formDataList) {
                     formDataList.innerHTML = '';
                 }
-                const fields = normalizedRecord.formDataFields.length > 0
-                    ? normalizedRecord.formDataFields
+                const fields = Array.isArray(state.formDataFields) && state.formDataFields.length > 0
+                    ? state.formDataFields
                     : [{}];
                 fields.forEach(field => addFormDataRow(field));
                 activateBodyMode('formdata');
-            } else if (normalizedRecord.bodyMode === 'binary') {
+            } else if (state.bodyMode === 'binary') {
                 activateBodyMode('binary');
                 updateBinaryFileNameDisplay();
             } else {
+                const bodyEditor = document.getElementById('bodyEditor');
                 if (bodyEditor) {
-                    bodyEditor.value = formatJsonBodyIfPossible(normalizedRecord.body || '');
+                    bodyEditor.value = formatJsonBodyIfPossible(typeof state.body === 'string' ? state.body : '');
                     updateBodyEditorVisualState();
                 }
                 activateBodyMode('json');
             }
 
-            if (normalizedRecord.response) {
-                displayResponse(normalizedRecord.response, { restored: true });
+            if (state.response) {
+                displayResponse(state.response);
             }
         });
-    }
 
-
-
-    // Get current selected base URL
-    function getCurrentBaseUrl() {
-        const select = document.getElementById('baseUrlSelect');
-        return select.value || '';
-    }
-
-    function setCurrentBearerToken(token) {
-        projectBearerToken = typeof token === 'string' ? token : '';
-
-        const tokenInput = document.getElementById('tokenInput');
-        if (tokenInput && !tokenWasRestoredFromHistory) {
-            tokenInput.value = projectBearerToken;
-        }
-    }
-
-    function requestBearerTokenForCurrentBaseUrl() {
-        const baseUrl = getCurrentBaseUrl().trim();
-        if (!baseUrl) {
-            setCurrentBearerToken('');
-            return;
-        }
-
-        setCurrentBearerToken('');
-        vscode.postMessage({
-            type: 'requestProjectBearerToken',
-            data: { baseUrl }
-        });
-    }
-
-    function requestHistoryForCurrentBaseUrl() {
-        vscode.postMessage({
-            type: 'requestRequestHistory',
-            data: {
-                baseUrl: getCurrentBaseUrl().trim()
-            }
-        });
-    }
-
-    document.getElementById('baseUrlSelect')?.addEventListener('change', () => {
-        updateBaseUrlSelectWidth();
         hasUserEditedRequest = false;
-        autoAppliedHistoryBaseUrl = null;
-        tokenWasRestoredFromHistory = false;
-        requestBearerTokenForCurrentBaseUrl();
-        requestHistoryForCurrentBaseUrl();
-    });
-
-    function closeProjectBearerTokenModal() {
-        document.getElementById('projectBearerTokenModal').classList.remove('show');
     }
 
-    document.getElementById('projectBearerTokenBtn')?.addEventListener('click', () => {
-        if (!getCurrentBaseUrl().trim()) {
-            showToast(t('projectBearer.noBaseUrl'), 'info');
+    document.getElementById('baseUrlInput')?.addEventListener('change', () => {
+        hasUserEditedRequest = false;
+        requestRequestStateForCurrentBaseUrl();
+    });
+
+    document.getElementById('baseUrlInput')?.addEventListener('keydown', (event) => {
+        const { dropdown } = getBaseUrlDropdownElements();
+        if (!dropdown) {
             return;
         }
 
-        const modalInput = document.getElementById('projectBearerTokenModalInput');
-        modalInput.value = projectBearerToken.trim();
-        document.getElementById('projectBearerTokenModal').classList.add('show');
-        setTimeout(() => {
-            modalInput.focus();
-            modalInput.select();
-        }, 0);
-    });
+        const options = getRenderedBaseUrlOptions();
+        const isOpen = dropdown.classList.contains('show');
 
-    document.getElementById('cancelProjectBearerTokenBtn')?.addEventListener('click', () => {
-        closeProjectBearerTokenModal();
-    });
-
-    function persistCurrentBearerTokenFromAuthInput() {
-        const baseUrl = getCurrentBaseUrl().trim();
-        if (!baseUrl) {
-            showToast(t('projectBearer.noBaseUrl'), 'info');
+        if (event.key === 'Escape') {
+            closeBaseUrlDropdown();
             return;
         }
 
-        const tokenInput = document.getElementById('tokenInput');
-        const nextToken = tokenInput?.value.trim() || '';
-
-        setCurrentBearerToken(nextToken);
-
-        vscode.postMessage({
-            type: 'saveProjectBearerToken',
-            data: {
-                baseUrl,
-                token: nextToken
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (!isOpen) {
+                openBaseUrlDropdown();
+                return;
             }
-        });
-
-        showToast(nextToken ? t('projectBearer.saved') : t('projectBearer.cleared'), 'success');
-    }
-
-    document.getElementById('saveProjectBearerTokenBtn')?.addEventListener('click', () => {
-        const modalInput = document.getElementById('projectBearerTokenModalInput');
-        const baseUrl = getCurrentBaseUrl().trim();
-        if (!baseUrl) {
-            closeProjectBearerTokenModal();
-            showToast(t('projectBearer.noBaseUrl'), 'info');
+            if (!options.length) {
+                return;
+            }
+            activeBaseUrlOptionIndex = Math.min(activeBaseUrlOptionIndex + 1, options.length - 1);
+            updateActiveBaseUrlOption();
             return;
         }
 
-        const nextToken = modalInput.value.trim();
-
-        setCurrentBearerToken(nextToken);
-
-        vscode.postMessage({
-            type: 'saveProjectBearerToken',
-            data: {
-                baseUrl,
-                token: nextToken
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!isOpen || !options.length) {
+                return;
             }
-        });
+            activeBaseUrlOptionIndex = Math.max(activeBaseUrlOptionIndex - 1, 0);
+            updateActiveBaseUrlOption();
+            return;
+        }
 
-        closeProjectBearerTokenModal();
-        showToast(nextToken ? t('projectBearer.saved') : t('projectBearer.cleared'), 'success');
+        if (event.key === 'Enter' && isOpen && activeBaseUrlOptionIndex >= 0 && activeBaseUrlOptionIndex < options.length) {
+            event.preventDefault();
+            const selected = options[activeBaseUrlOptionIndex]?.dataset?.value || '';
+            if (selected) {
+                selectBaseUrlOption(selected);
+            }
+        }
     });
 
-    document.getElementById('saveBearerTokenFromAuthBtn')?.addEventListener('click', () => {
-        persistCurrentBearerTokenFromAuthInput();
+    document.getElementById('baseUrlDropdownToggle')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const { dropdown, input } = getBaseUrlDropdownElements();
+        if (!dropdown) {
+            return;
+        }
+
+        if (dropdown.classList.contains('show')) {
+            closeBaseUrlDropdown();
+            return;
+        }
+
+        input?.focus();
+        openBaseUrlDropdown();
     });
 
-    window.addEventListener('resize', () => {
-        updateBaseUrlSelectWidth();
+    document.addEventListener('click', (event) => {
+        const container = document.querySelector('.base-url-container');
+        if (!container) {
+            return;
+        }
+
+        if (!container.contains(event.target)) {
+            closeBaseUrlDropdown();
+        }
     });
 
     document.getElementById('addHeaderBtn')?.addEventListener('click', () => addHeaderRow());
-    document.getElementById('addQueryBtn')?.addEventListener('click', addQueryRow);
+    document.getElementById('addQueryBtn')?.addEventListener('click', () => addQueryRow());
+    document.getElementById('queryQuickInput')?.addEventListener('input', () => {
+        if (suppressQueryQuickInputAutoApply) {
+            return;
+        }
+        scheduleQueryQuickAutoApply();
+    });
+    document.getElementById('queryQuickInput')?.addEventListener('paste', () => {
+        clearQueryQuickApplyTimer();
+        setTimeout(() => {
+            applyQueryQuickInput({ notifyOnEmpty: false, markDirty: true });
+        }, 0);
+    });
     document.getElementById('addFormDataRowBtn')?.addEventListener('click', () => addFormDataRow());
     document.getElementById('clearDisabledFormDataBtn')?.addEventListener('click', clearDisabledFormDataRows);
     document.getElementById('formatJsonBtn')?.addEventListener('click', formatJsonEditorContent);
@@ -702,30 +1077,6 @@
     document.getElementById('bodyEditor')?.addEventListener('scroll', syncBodyEditorHighlightScroll);
     document.querySelector('.request-section')?.addEventListener('input', markRequestDirty);
     document.querySelector('.request-section')?.addEventListener('change', markRequestDirty);
-    document.getElementById('historySelect')?.addEventListener('change', () => {
-        const historySelect = document.getElementById('historySelect');
-        const selectedId = historySelect?.value;
-
-        if (!selectedId) {
-            return;
-        }
-
-        const selectedRecord = requestHistory.find(item => item.id === selectedId);
-        if (selectedRecord) {
-            applyHistoryRecord(selectedRecord);
-            hasUserEditedRequest = false;
-        }
-    });
-
-    document.getElementById('clearHistoryBtn')?.addEventListener('click', () => {
-        vscode.postMessage({
-            type: 'clearRequestHistory',
-            data: {
-                baseUrl: getCurrentBaseUrl().trim()
-            }
-        });
-    });
-
     document.getElementById('openResponseInEditorBtn')?.addEventListener('click', () => {
         const responseText = typeof latestResponseText === 'string' ? latestResponseText : '';
         if (!responseText) {
@@ -752,6 +1103,14 @@
         const target = e.target;
         if (target.classList.contains('remove-button')) {
             target.closest('.param-row')?.remove();
+            scheduleQueryQuickSyncFromRows();
+        }
+    });
+
+    document.getElementById('queryList')?.addEventListener('input', (e) => {
+        const target = e.target;
+        if (target.classList.contains('param-input')) {
+            scheduleQueryQuickSyncFromRows();
         }
     });
 
@@ -1023,6 +1382,22 @@
         debugButton.disabled = false;
     }
 
+    function updateMockAllButton() {
+        const mockAllBtn = document.getElementById('mockAllBtn');
+        if (!mockAllBtn) {
+            return;
+        }
+
+        if (isMockAllLoading) {
+            mockAllBtn.textContent = t('bodyMode.mocking') || 'Mocking...';
+            mockAllBtn.disabled = true;
+            return;
+        }
+
+        mockAllBtn.textContent = t('bodyMode.mock') || 'Mock';
+        mockAllBtn.disabled = false;
+    }
+
     document.getElementById('binaryFileSelectBtn')?.addEventListener('click', () => {
         document.getElementById('binaryFileInput')?.click();
     });
@@ -1043,6 +1418,33 @@
         vscode.postMessage({
             type: 'startDebug'
         });
+    });
+
+    document.getElementById('backToActionBtn')?.addEventListener('click', () => {
+        vscode.postMessage({
+            type: 'backToAction'
+        });
+    });
+
+    document.getElementById('mockAllBtn')?.addEventListener('click', () => {
+        if (isMockAllLoading) {
+            return;
+        }
+
+        if (!currentApiEndpoint || typeof currentApiEndpoint !== 'object') {
+            showToast(t('bodyMode.mockNoEndpoint') || 'No API endpoint available for mock generation', 'error');
+            return;
+        }
+
+        isMockAllLoading = true;
+        vscode.postMessage({
+            type: 'requestMockAll',
+            data: {
+                baseUrl: getCurrentBaseUrl()
+            }
+        });
+
+        updateMockAllButton();
     });
 
     // Auth type switching
@@ -1095,13 +1497,13 @@
     }
 
     // Add query row
-    function addQueryRow() {
+    function addQueryRow(key = '', value = '') {
         const list = document.getElementById('queryList');
         const row = document.createElement('div');
         row.className = 'param-row';
         row.innerHTML = `
-                <input type="text" class="param-input" placeholder="${t('placeholder.key')}" />
-                <input type="text" class="param-input" placeholder="${t('placeholder.value')}" />
+                <input type="text" class="param-input" placeholder="${t('placeholder.key')}" value="${escapeHtml(key)}" />
+                <input type="text" class="param-input" placeholder="${t('placeholder.value')}" value="${escapeHtml(value)}" />
                 <button class="remove-button" type="button">${t('remove') || ''}</button>
             `;
         list.appendChild(row);
@@ -1109,11 +1511,7 @@
     }
 
     function addQueryRowWithKey(key) {
-        const row = addQueryRow();
-        const keyInput = row?.querySelectorAll('.param-input')?.[0];
-        if (keyInput) {
-            keyInput.value = key;
-        }
+        addQueryRow(key, '');
     }
 
     function extractRouteParamName(placeholderContent) {
@@ -1174,6 +1572,7 @@
 
         const method = currentApiEndpoint.httpMethod;
         const baseUrl = getCurrentBaseUrl();
+        ensureCurrentBaseUrlSaved(baseUrl);
         const route = document.getElementById('routeInput').value;
         const token = document.getElementById('tokenInput').value;
 
@@ -1199,29 +1598,8 @@
             }
         }
 
-        // Collect query parameters and append to URL
-        // Priority: query string input > manual parameter list
-        const queryEntries = [];
-        const queryStringInput = document.getElementById('queryStringInput').value.trim();
-
-        if (queryStringInput) {
-            // Use query string input (priority)
-            const cleanString = queryStringInput.startsWith('?') ? queryStringInput.substring(1) : queryStringInput;
-            const params = new URLSearchParams(cleanString);
-            params.forEach((value, key) => {
-                queryEntries.push({ key, value });
-            });
-        } else {
-            // Use manual parameter list (fallback)
-            document.querySelectorAll('#queryList .param-row').forEach(row => {
-                const inputs = row.querySelectorAll('.param-input');
-                const key = inputs[0].value.trim();
-                const value = inputs[1].value.trim();
-                if (key) {
-                    queryEntries.push({ key, value });
-                }
-            });
-        }
+        // Collect query parameters from manual parameter list
+        const queryEntries = collectQueryEntriesFromRows();
 
         const { replacedRoute, consumedIndexes } = replaceRoutePlaceholders(route, queryEntries);
         const url = baseUrl + replacedRoute;
@@ -1304,19 +1682,19 @@
     // Update UI texts when language changes
     function updateUITexts() {
         // Update button texts
+        const backToActionBtn = document.getElementById('backToActionBtn');
+        if (backToActionBtn) {
+            backToActionBtn.textContent = t('backToAction') || 'Back';
+        }
         updateDebugButton();
         document.getElementById('sendButton').textContent = t('send');
         document.getElementById('addHeaderBtn').textContent = t('add');
         document.getElementById('addQueryBtn').textContent = t('add');
-        document.getElementById('addNewBaseUrlBtn').textContent = t('baseUrl.add');
-        document.getElementById('clearHistoryBtn').textContent = t('history.clear') || 'Clear';
+        const mockAllBtn = document.getElementById('mockAllBtn');
+        if (mockAllBtn) {
+            mockAllBtn.title = t('bodyMode.mock') || 'Mock';
+        }
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
-        document.getElementById('projectBearerTokenBtn').title = t('projectBearer.quickEntry');
-        document.getElementById('saveBearerTokenFromAuthBtn').textContent = t('projectBearer.saveAction');
-        document.getElementById('projectBearerTokenModalTitle').textContent = t('projectBearer.title');
-        document.getElementById('projectBearerTokenModalInput').placeholder = t('placeholder.token');
-        document.getElementById('cancelProjectBearerTokenBtn').title = t('cancel');
-        document.getElementById('saveProjectBearerTokenBtn').title = t('save');
         const openResponseInEditorBtn = document.getElementById('openResponseInEditorBtn');
         if (openResponseInEditorBtn) {
             openResponseInEditorBtn.textContent = t('response.copyOpen') || 'Open';
@@ -1353,10 +1731,21 @@
         document.querySelector('.status-bar .status-item:nth-child(3) .status-label').textContent = t('time.label');
 
         // Update placeholders
+        const baseUrlInput = document.getElementById('baseUrlInput');
+        if (baseUrlInput) {
+            baseUrlInput.placeholder = t('placeholder.baseUrl');
+        }
         document.getElementById('routeInput').placeholder = t('placeholder.route');
         document.getElementById('tokenInput').placeholder = t('placeholder.token');
         document.getElementById('bodyEditor').placeholder = t('placeholder.body');
-        document.getElementById('queryStringInput').placeholder = t('placeholder.queryString');
+        const queryQuickInput = document.getElementById('queryQuickInput');
+        if (queryQuickInput) {
+            queryQuickInput.placeholder = t('placeholder.queryString');
+        }
+        const applyQueryQuickInputBtn = document.getElementById('applyQueryQuickInputBtn');
+        if (applyQueryQuickInputBtn) {
+            applyQueryQuickInputBtn.textContent = t('query.apply') || 'Apply';
+        }
 
         // Update body mode labels
         document.querySelectorAll('.body-mode-tab').forEach(tab => {
@@ -1429,6 +1818,7 @@
             }
             updateFormDataFileName(row);
         });
+        updateMockAllButton();
         const binaryFileLabel = document.querySelector('.binary-file-label');
         if (binaryFileLabel) {
             binaryFileLabel.textContent = t('bodyMode.binaryFile');
@@ -1439,13 +1829,9 @@
         }
         updateBinaryFileNameDisplay();
 
-        // Update manage button title
-        document.getElementById('manageBaseUrlBtn').title = t('baseUrl.manage');
-
         // Update auth type button
         document.querySelector('[data-auth-type="bearer"]').textContent = t('auth.bearer');
 
-        renderRequestHistory();
     }
 
     // Handle messages from extension
@@ -1463,7 +1849,6 @@
             case 'requestComplete':
                 displayResponse(message.data);
                 hasUserEditedRequest = false;
-                autoAppliedHistoryBaseUrl = getCurrentBaseUrl().trim();
                 break;
             case 'updateApiEndpoint':
                 updateApiEndpoint(message.data);
@@ -1471,28 +1856,9 @@
             case 'loadBaseUrls':
                 savedBaseUrls = message.data || [];
                 renderBaseUrls();
-                requestBearerTokenForCurrentBaseUrl();
                 break;
-            case 'loadProjectBearerToken': {
-                setCurrentBearerToken(typeof message.data === 'string' ? message.data : '');
-                break;
-            }
-            case 'requestHistoryLoaded':
-                requestHistory = Array.isArray(message.data)
-                    ? message.data.map(normalizeHistoryRecord).filter(Boolean)
-                    : [];
-                renderRequestHistory();
-                if (requestHistory.length > 0
-                    && !hasUserEditedRequest
-                    && autoAppliedHistoryBaseUrl !== getCurrentBaseUrl().trim()) {
-                    const latestRecord = requestHistory[0];
-                    applyHistoryRecord(latestRecord);
-                    const historySelect = document.getElementById('historySelect');
-                    if (historySelect) {
-                        historySelect.value = latestRecord.id;
-                    }
-                    autoAppliedHistoryBaseUrl = getCurrentBaseUrl().trim();
-                }
+            case 'loadRequestState':
+                applyRequestState(message.data);
                 break;
             case 'renderSettings': {
                 const settings = message.data || {};
@@ -1528,6 +1894,72 @@
                 }
                 break;
             }
+            case 'mockAllResult': {
+                isMockAllLoading = false;
+                updateMockAllButton();
+
+                const result = message.data || {};
+                if (!result.success) {
+                    showToast(result.message || t('bodyMode.mockFailed') || 'Failed to generate mock data from Swagger', 'error');
+                    break;
+                }
+
+                let appliedCount = 0;
+                const bodyEditor = document.getElementById('bodyEditor');
+                const hasBodyContent = !!bodyEditor && (bodyEditor.value || '').trim().length > 0;
+
+                if (typeof result.body === 'string' && result.body.trim().length > 0) {
+                    if (bodyEditor && !hasBodyContent) {
+                        bodyEditor.value = formatJsonBodyIfPossible(result.body);
+                        updateBodyEditorVisualState();
+                        appliedCount += 1;
+                    } else if (hasBodyContent) {
+                        showToast(t('bodyMode.mockSkipWhenBodyExists') || 'Body already has content. Clear it first if you want to generate mock body.', 'info');
+                    }
+                }
+
+                if (Array.isArray(result.queryEntries) && result.queryEntries.length > 0) {
+                    const normalizedEntries = result.queryEntries
+                        .map(entry => ({
+                            key: typeof entry?.key === 'string' ? entry.key.trim() : '',
+                            value: typeof entry?.value === 'string' ? entry.value : String(entry?.value ?? '')
+                        }))
+                        .filter(entry => entry.key.length > 0);
+
+                    if (normalizedEntries.length > 0) {
+                        const existingEntries = collectQueryEntriesFromRows();
+                        const mergedEntries = mergeQueryEntriesKeepingManual(existingEntries, normalizedEntries);
+
+                        renderQueryRowsFromEntries(mergedEntries);
+                        setQueryQuickInputValue(buildQueryStringFromEntries(mergedEntries));
+                        appliedCount += 1;
+                    }
+                }
+
+                if (Array.isArray(result.formDataEntries) && result.formDataEntries.length > 0) {
+                    const normalizedFormEntries = result.formDataEntries
+                        .map(entry => ({
+                            key: typeof entry?.key === 'string' ? entry.key.trim() : '',
+                            value: typeof entry?.value === 'string' ? entry.value : String(entry?.value ?? '')
+                        }))
+                        .filter(entry => entry.key.length > 0);
+
+                    if (normalizedFormEntries.length > 0) {
+                        const existingFormEntries = collectFormDataEntriesFromRows();
+                        const mergedFormEntries = mergeFormDataEntriesKeepingManual(existingFormEntries, normalizedFormEntries);
+                        renderFormDataRowsFromEntries(mergedFormEntries);
+                        appliedCount += 1;
+                    }
+                }
+
+                if (appliedCount > 0) {
+                    hasUserEditedRequest = true;
+                    showToast(t('bodyMode.mockLoadedSwaggerUrl') || 'Mock data generated from Swagger', 'success');
+                } else {
+                    showToast(result.message || t('bodyMode.mockFailed') || 'No mock data available for this endpoint', 'info');
+                }
+                break;
+            }
         }
     });
 
@@ -1535,18 +1967,14 @@
     function initializeWithApiEndpoint(apiEndpoint) {
         currentApiEndpoint = apiEndpoint;
         currentDebugState = 'idle';
-        projectBearerToken = '';
+        isMockAllLoading = false;
         hasUserEditedRequest = false;
-        autoAppliedHistoryBaseUrl = null;
-        tokenWasRestoredFromHistory = false;
         restoredBinaryBodyBase64 = '';
         restoredBinaryContentType = '';
         restoredBinaryFileName = '';
         updateDebugButton();
-        requestHistory = [];
-        renderRequestHistory();
+        updateMockAllButton();
 
-        setCurrentBearerToken('');
         resetResponseDisplay();
 
         // Update HTTP method and URL
@@ -1569,28 +1997,19 @@
         // Render base URL dropdown
         renderBaseUrls();
 
-        // Query parameters list starts empty - users can add them manually
+        // Query parameters list starts empty - only restored state will populate it
         document.getElementById('queryList').innerHTML = '';
 
-        const autoQueryParamNames = Array.isArray(apiEndpoint.autoQueryParamNames)
-            ? apiEndpoint.autoQueryParamNames
-                .filter(name => typeof name === 'string')
-                .map(name => name.trim())
-                .filter(name => name.length > 0)
-            : [];
-
-        if (autoQueryParamNames.length > 0) {
-            activateMainTab('query');
-            autoQueryParamNames.forEach(paramName => addQueryRowWithKey(paramName));
+        const bodyEditor = document.getElementById('bodyEditor');
+        if (bodyEditor) {
+            bodyEditor.value = '';
         }
-
-        const preferredBodyMode = apiEndpoint.preferredBodyMode;
-        if (preferredBodyMode === 'binary' || preferredBodyMode === 'formdata') {
-            activateMainTab('body');
-            activateBodyMode(preferredBodyMode);
-        }
+        currentBodyMode = 'json';
+        activateBodyMode('json');
+        updateBodyEditorVisualState();
 
         updateBodyEditorVisualState();
+        requestRequestStateForCurrentBaseUrl();
     }
 
     // Update API endpoint (when switching between different APIs)
@@ -1600,27 +2019,34 @@
 
     // JSON 语法高亮函数
     function highlightJSON(jsonString) {
-        const escapeHtml = (text) => {
-            return text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-        };
-
         try {
             // 尝试解析为 JSON
             JSON.parse(jsonString);
 
-            // 高亮 JSON
-            return jsonString
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
-                .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
-                .replace(/: (\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
-                .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
-                .replace(/: null/g, ': <span class="json-null">null</span>');
+            const tokenPattern = /("(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"\s*:?)|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|[{}\[\],:]/g;
+
+            return jsonString.replace(tokenPattern, (match) => {
+                let cssClass = 'json-number';
+
+                if (match.startsWith('"')) {
+                    if (match.trimEnd().endsWith(':')) {
+                        const colonIndex = match.lastIndexOf(':');
+                        const keyPart = colonIndex >= 0 ? match.slice(0, colonIndex) : match;
+                        const colonPart = colonIndex >= 0 ? match.slice(colonIndex) : '';
+                        return `<span class="json-key">${escapeHtml(keyPart)}</span><span class="json-punctuation">${escapeHtml(colonPart)}</span>`;
+                    }
+
+                    cssClass = 'json-string';
+                } else if (match === 'true' || match === 'false') {
+                    cssClass = 'json-boolean';
+                } else if (match === 'null') {
+                    cssClass = 'json-null';
+                } else if (/^[{}\[\],:]$/.test(match)) {
+                    cssClass = 'json-punctuation';
+                }
+
+                return `<span class="${cssClass}">${escapeHtml(match)}</span>`;
+            });
         } catch {
             // 不是 JSON，返回转义的纯文本
             return escapeHtml(jsonString);
@@ -1811,7 +2237,7 @@
     }
 
     // Display response
-    function displayResponse(data, options = {}) {
+    function displayResponse(data) {
         if (!data || typeof data !== 'object') {
             resetResponseDisplay();
             return;
@@ -1819,9 +2245,6 @@
 
         // Re-enable send button
         document.getElementById('sendButton').disabled = false;
-        const restoredNotice = options.restored
-            ? `<span style="color: var(--vscode-descriptionForeground); font-style: italic;">${escapeHtml(t('history.restoredResponse') || 'Restored from latest request history.')}</span>\n\n`
-            : '';
 
         if (data.success) {
             // Update status
@@ -1845,7 +2268,7 @@
             if (isLargeResponse) {
                 const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
                 renderLineNumbers(lineCount);
-                responseHtml = `${restoredNotice}<span style="color: var(--vscode-descriptionForeground);">Large response detected. Rendered in plain text mode for performance.</span>\n\n${escapeHtml(formattedBody)}`;
+                responseHtml = `<span style="color: var(--vscode-descriptionForeground);">Large response detected. Rendered in plain text mode for performance.</span>\n\n${escapeHtml(formattedBody)}`;
             } else {
                 try {
                     const jsonObj = JSON.parse(data.body);
@@ -1857,7 +2280,7 @@
                 const lineCount = Math.max(1, (formattedBody.match(/\n/g)?.length || 0) + 1);
                 renderLineNumbers(lineCount);
 
-                responseHtml = restoredNotice + highlightJSON(formattedBody);
+                responseHtml = highlightJSON(formattedBody);
             }
 
             latestResponseText = formattedBody;
@@ -1892,7 +2315,7 @@
             document.getElementById('timeValue').textContent = Number.isFinite(data.duration) ? data.duration + ' ms' : '-';
 
             // Display error in response body
-            document.getElementById('responseBody').innerHTML = restoredNotice + escapeHtml(data.error || '');
+            document.getElementById('responseBody').innerHTML = escapeHtml(data.error || '');
             latestResponseText = typeof data.error === 'string' ? data.error : String(data.error || '');
             renderLineNumbers(1);
 

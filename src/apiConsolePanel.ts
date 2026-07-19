@@ -7,28 +7,8 @@ import { ApiEndpoint } from './models/apiEndpoint';
 import { ProjectConfigCache } from './projectConfigCache';
 import { BaseUrlConfigManager } from './services/baseUrlConfigManager';
 import { FormDataField, HttpClient, HttpResponse } from './services/httpClient';
-import {
-    RequestHistoryFormDataField,
-    RequestHistoryItem,
-    RequestHistoryResponseSnapshot,
-    RequestHistoryStore
-} from './services/requestHistoryStore';
-
-export interface OpenApiConsolePanelInfo {
-    id: string;
-    endpointKey: string;
-    title: string;
-    fullUrl: string;
-    method: string;
-    route: string;
-    action: string;
-    projectPath: string;
-    isPinned: boolean;
-    isVisible: boolean;
-    isActive: boolean;
-    debugStatus: 'idle' | 'running';
-    createdOrder: number;
-}
+import { OpenApiBodyMockService } from './services/openApiBodyMockService';
+import { RequestStateSnapshot, RequestStateStore } from './services/requestStateStore';
 
 type ApiConsoleRequestData = {
     method: string;
@@ -52,7 +32,6 @@ type ApiConsoleRequestData = {
  */
 export class ApiConsolePanel {
     public static currentPanel: ApiConsolePanel | undefined;
-    private static readonly projectBearerTokenStorageKey = 'projectBearerToken.byProject';
     private readonly panel: vscode.WebviewPanel;
     private readonly viewType: string;
     private readonly extensionUri: vscode.Uri;
@@ -61,21 +40,19 @@ export class ApiConsolePanel {
     private isWebviewReady = false;
     private readonly projectConfigCache: ProjectConfigCache;
     private readonly httpClient: HttpClient;
+    private readonly openApiBodyMockService: OpenApiBodyMockService;
     private readonly baseUrlConfigManager: BaseUrlConfigManager;
-    private readonly requestHistoryStore: RequestHistoryStore;
+    private readonly requestStateStore: RequestStateStore;
     private readonly context: vscode.ExtensionContext;
     private readonly panelId: number;
     private currentProjectPath: string = '';
     private currentApiEndpoint: ApiEndpoint | null = null;
     private endpointKey: string;
     private tabPinned = false;
-    private static readonly DEBUG_SESSION_PREFIX = 'C# API Console';
+    private static readonly debugSessionPrefix = 'C# API Console';
     private static readonly runningProjectPaths = new Set<string>();
     private static readonly openPanels = new Set<ApiConsolePanel>();
     private static readonly panelByEndpointKey = new Map<string, ApiConsolePanel>();
-    private static readonly panelById = new Map<string, ApiConsolePanel>();
-    private static readonly onDidPanelsChangedEmitter = new vscode.EventEmitter<void>();
-    public static readonly onDidPanelsChanged = ApiConsolePanel.onDidPanelsChangedEmitter.event;
     private static panelCounter = 0;
 
     public static onDebugSessionStarted(session: vscode.DebugSession): void {
@@ -92,8 +69,6 @@ export class ApiConsolePanel {
                 panel.postDebugStatus('running');
             }
         }
-
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
     }
 
     public static onDebugSessionTerminated(session: vscode.DebugSession): void {
@@ -110,36 +85,6 @@ export class ApiConsolePanel {
                 panel.postDebugStatus('idle');
             }
         }
-
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
-    }
-
-    public static syncTabPinnedStates(): void {
-        for (const panel of ApiConsolePanel.openPanels) {
-            panel.syncPinnedStateFromTab();
-        }
-
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
-    }
-
-    public static getOpenPanelInfos(): OpenApiConsolePanelInfo[] {
-        const panels = Array.from(ApiConsolePanel.openPanels)
-            .map(panel => panel.getPanelInfo())
-            .sort((a, b) => a.createdOrder - b.createdOrder);
-
-        return panels;
-    }
-
-    public static revealPanelById(panelId: string): boolean {
-        const panel = ApiConsolePanel.panelById.get(panelId);
-        if (!panel) {
-            return false;
-        }
-
-        panel.reveal(vscode.ViewColumn.Active);
-        ApiConsolePanel.currentPanel = panel;
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
-        return true;
     }
 
     /**
@@ -167,7 +112,6 @@ export class ApiConsolePanel {
 
             if (!existingPanel.shouldOpenNewForSameEndpoint()) {
                 ApiConsolePanel.currentPanel = existingPanel;
-                ApiConsolePanel.onDidPanelsChangedEmitter.fire();
                 return;
             }
         }
@@ -247,12 +191,11 @@ export class ApiConsolePanel {
         this.endpointKey = endpointKey;
         this.projectConfigCache = projectConfigCache;
         this.httpClient = new HttpClient();
+        this.openApiBodyMockService = new OpenApiBodyMockService();
         this.baseUrlConfigManager = baseUrlConfigManager;
-        this.requestHistoryStore = new RequestHistoryStore(context);
+        this.requestStateStore = new RequestStateStore(context);
         this.context = context;
         ApiConsolePanel.openPanels.add(this);
-        ApiConsolePanel.panelById.set(String(this.panelId), this);
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
 
         // 加载静态 HTML 内容
         this.panel.webview.html = this.getStaticHtml();
@@ -273,11 +216,16 @@ export class ApiConsolePanel {
         const routeWithoutLeadingSlash = route.replace(/^\/+/, '');
 
         if (routeWithoutLeadingSlash.length > 0) {
-            return routeWithoutLeadingSlash;
-        }
+            const segments = routeWithoutLeadingSlash
+                .split('/')
+                .map(segment => segment.trim())
+                .filter(segment => segment.length > 0);
 
-        if (route.length > 0) {
-            return route;
+            if (segments.length > 0) {
+                return segments[segments.length - 1];
+            }
+
+            return routeWithoutLeadingSlash;
         }
 
         return (apiEndpoint.action || '').trim() || 'API';
@@ -290,38 +238,6 @@ export class ApiConsolePanel {
         const projectPath = ApiConsolePanel.normalizeProjectPath(apiEndpoint.projectPath || '');
 
         return `${projectPath}::${method}::${route}::${action}`;
-    }
-
-    private getPanelInfo(): OpenApiConsolePanelInfo {
-        this.syncPinnedStateFromTab();
-
-        const endpoint = this.currentApiEndpoint || this.pendingApiEndpoint;
-        const method = (endpoint?.httpMethod || '').toUpperCase();
-        const route = endpoint?.routeTemplate || '';
-        const fullUrl = endpoint?.fullUrl || '';
-        const action = endpoint?.action || '';
-        const projectPath = endpoint?.projectPath || this.currentProjectPath;
-        const normalizedProjectPath = projectPath
-            ? ApiConsolePanel.normalizeProjectPath(projectPath)
-            : '';
-
-        return {
-            id: String(this.panelId),
-            endpointKey: this.endpointKey,
-            title: this.panel.title,
-            fullUrl,
-            method,
-            route,
-            action,
-            projectPath,
-            isPinned: this.tabPinned,
-            isVisible: this.panel.visible,
-            isActive: ApiConsolePanel.currentPanel === this,
-            debugStatus: normalizedProjectPath && ApiConsolePanel.runningProjectPaths.has(normalizedProjectPath)
-                ? 'running'
-                : 'idle',
-            createdOrder: this.panelId
-        };
     }
 
     /**
@@ -342,28 +258,49 @@ export class ApiConsolePanel {
             case 'requestBaseUrls':
                 await this.loadBaseUrls();
                 break;
-            case 'requestRequestHistory':
-                await this.loadRequestHistory(message.data?.baseUrl);
+            case 'requestRequestState':
+                await this.loadRequestState(message.data?.baseUrl);
                 break;
             case 'saveBaseUrls':
                 await this.saveBaseUrls(message.data);
                 break;
-            case 'requestProjectBearerToken':
-                await this.loadProjectBearerToken(message.data);
-                break;
-            case 'saveProjectBearerToken':
-                await this.saveProjectBearerToken(message.data);
-                break;
             case 'startDebug':
                 await this.startDebugSession();
                 break;
-            case 'clearRequestHistory':
-                await this.clearRequestHistory(message.data?.baseUrl);
+            case 'backToAction':
+                await this.backToAction();
                 break;
             case 'openResponseInEditor':
                 await this.openResponseInEditor(message.data?.content);
                 break;
+            case 'requestMockAll':
+                await this.handleMockAllRequest(message.data?.baseUrl);
+                break;
         }
+    }
+
+    private async handleMockAllRequest(baseUrl?: unknown): Promise<void> {
+        if (!this.currentApiEndpoint) {
+            this.panel.webview.postMessage({
+                type: 'mockAllResult',
+                data: {
+                    success: false,
+                    message: lang.t('webview.bodyMode.mockNoEndpoint')
+                }
+            });
+            return;
+        }
+
+        const requestBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
+        const result = await this.openApiBodyMockService.generateAllFromSwagger(
+            this.currentApiEndpoint,
+            requestBaseUrl
+        );
+
+        this.panel.webview.postMessage({
+            type: 'mockAllResult',
+            data: result
+        });
     }
 
     private async openResponseInEditor(content: unknown): Promise<void> {
@@ -375,13 +312,18 @@ export class ApiConsolePanel {
         try {
             await vscode.env.clipboard.writeText(responseText);
 
-            const document = await vscode.workspace.openTextDocument({
-                language: this.detectResponseLanguage(responseText),
-                content: responseText
-            });
+            const language = this.detectResponseLanguage(responseText);
+            const previewDir = vscode.Uri.joinPath(this.context.globalStorageUri, 'response-preview');
+            await vscode.workspace.fs.createDirectory(previewDir);
+
+            const extension = language === 'json' ? 'json' : 'txt';
+            const responseFileUri = vscode.Uri.joinPath(previewDir, `latest-response.${extension}`);
+            await vscode.workspace.fs.writeFile(responseFileUri, Buffer.from(responseText, 'utf8'));
+
+            const document = await vscode.workspace.openTextDocument(responseFileUri);
 
             await vscode.window.showTextDocument(document, {
-                preview: false,
+                preview: true,
                 preserveFocus: false
             });
         } catch (error) {
@@ -389,6 +331,35 @@ export class ApiConsolePanel {
                 ? `: ${error.message}`
                 : '';
             void vscode.window.showErrorMessage(`${lang.t('webview.error.requestFailed')}${detail}`);
+        }
+    }
+
+    private async backToAction(): Promise<void> {
+        const endpoint = this.currentApiEndpoint || this.pendingApiEndpoint;
+        const filePath = endpoint?.filePath;
+        const lineNumber = Number(endpoint?.lineNumber || 1);
+
+        if (!filePath) {
+            void vscode.window.showWarningMessage(lang.t('webview.backToActionUnavailable'));
+            return;
+        }
+
+        try {
+            const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+            const editor = await vscode.window.showTextDocument(document, {
+                preview: false,
+                preserveFocus: false
+            });
+
+            const targetLine = Math.max(0, lineNumber - 1);
+            const targetPosition = new vscode.Position(targetLine, 0);
+            editor.selection = new vscode.Selection(targetPosition, targetPosition);
+            editor.revealRange(new vscode.Range(targetPosition, targetPosition), vscode.TextEditorRevealType.InCenter);
+        } catch (error) {
+            const detail = error instanceof Error && error.message
+                ? `: ${error.message}`
+                : '';
+            void vscode.window.showErrorMessage(`${lang.t('webview.backToActionFailed')}${detail}`);
         }
     }
 
@@ -428,6 +399,7 @@ export class ApiConsolePanel {
         });
 
         await this.loadBaseUrls();
+        await this.loadRequestState();
         this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
     }
 
@@ -495,7 +467,7 @@ export class ApiConsolePanel {
         const projectName = this.getProjectNameFromPath(this.currentProjectPath);
         const debugName = projectName
             ? `${projectName} Debug`
-            : `${ApiConsolePanel.DEBUG_SESSION_PREFIX} Debug`;
+            : `${ApiConsolePanel.debugSessionPrefix} Debug`;
         const targetFrameworks = this.getTargetFrameworksFromProject(this.currentProjectPath);
         const selectedFramework = this.selectPreferredTargetFramework(targetFrameworks);
 
@@ -647,14 +619,6 @@ export class ApiConsolePanel {
         return path.normalize(projectPath).toLowerCase();
     }
 
-    private static normalizeBaseUrl(baseUrl: string): string {
-        return baseUrl.trim().replace(/\/+$/, '').toLowerCase();
-    }
-
-    private static getProjectBearerTokenEntryKey(projectPath: string, baseUrl: string): string {
-        return `${ApiConsolePanel.normalizeProjectPath(projectPath)}|${ApiConsolePanel.normalizeBaseUrl(baseUrl)}`;
-    }
-
     private matchesProjectPath(projectPath: string): boolean {
         if (!this.currentProjectPath) {
             return false;
@@ -693,8 +657,8 @@ export class ApiConsolePanel {
 
             return tfmsMatch[1]
                 .split(';')
-                .map(item => item.trim())
-                .filter(item => item.length > 0);
+                .map((item: string) => item.trim())
+                .filter((item: string) => item.length > 0);
         } catch {
             return [];
         }
@@ -829,27 +793,13 @@ export class ApiConsolePanel {
             timeoutMs: this.getRequestTimeoutMs()
         });
 
-        await this.saveRequestHistory(requestData, response);
+        await this.saveRequestState(requestData, response);
 
         // 发送响应到 WebView
         this.panel.webview.postMessage({
             type: 'requestComplete',
             data: response
         });
-
-        await this.loadRequestHistory(requestData.baseUrl);
-    }
-
-    private getHistoryLimit(): number {
-        const configuredLimit = vscode.workspace
-            .getConfiguration('csharpApiConsole')
-            .get<number>('requestHistoryLimit', 10);
-
-        if (!Number.isFinite(configuredLimit)) {
-            return 10;
-        }
-
-        return Math.min(20, Math.max(1, Math.floor(configuredLimit)));
     }
 
     private getRequestTimeoutMs(): number | undefined {
@@ -880,317 +830,6 @@ export class ApiConsolePanel {
             maxResponseLineNumbers: safeMaxLineNumbers,
             jsonIndentSpaces: jsonIndentSpaces === 4 ? 4 : 2
         };
-    }
-
-    private getRequestHistoryMaxBodyBytes(): number {
-        const maxBodyKb = vscode.workspace
-            .getConfiguration('csharpApiConsole')
-            .get<number>('requestHistoryMaxBodyKb', 32);
-
-        if (!Number.isFinite(maxBodyKb) || maxBodyKb <= 0) {
-            return 32 * 1024;
-        }
-
-        return Math.floor(maxBodyKb * 1024);
-    }
-
-    private isRequestHistoryEnabled(): boolean {
-        return vscode.workspace
-            .getConfiguration('csharpApiConsole')
-            .get<boolean>('requestHistoryEnabled', true);
-    }
-
-    private shouldSaveBearerTokenInHistory(): boolean {
-        return vscode.workspace
-            .getConfiguration('csharpApiConsole')
-            .get<boolean>('requestHistorySaveBearerToken', false);
-    }
-
-    private getCurrentEndpointKey(baseUrl?: string, fallbackMethod?: string): string | null {
-        const normalizedBaseUrl = (baseUrl || '').trim();
-        if (this.currentApiEndpoint) {
-            const projectPath = this.currentApiEndpoint.projectPath
-                ? ApiConsolePanel.normalizeProjectPath(this.currentApiEndpoint.projectPath)
-                : '';
-            const method = (this.currentApiEndpoint.httpMethod || fallbackMethod || '').trim().toUpperCase();
-            const route = (this.currentApiEndpoint.routeTemplate || '').trim();
-            const action = (this.currentApiEndpoint.action || '').trim();
-            return `${projectPath}|${normalizedBaseUrl}|${method}|${route}|${action}`;
-        }
-
-        if (!fallbackMethod) {
-            return null;
-        }
-
-        return `fallback|${normalizedBaseUrl}|${fallbackMethod.toUpperCase()}`;
-    }
-
-    private extractPathAndQuery(url: string, pathFromRequest?: string, queryFromRequest?: string): { path: string; query: string } {
-        const fallbackPath = pathFromRequest && pathFromRequest.trim().length > 0
-            ? pathFromRequest.trim()
-            : '/';
-        const fallbackQuery = queryFromRequest?.trim() || '';
-
-        try {
-            const parsedUrl = new URL(url);
-            const query = parsedUrl.search ? parsedUrl.search.substring(1) : fallbackQuery;
-            return {
-                path: fallbackPath || parsedUrl.pathname || '/',
-                query
-            };
-        } catch {
-            return {
-                path: fallbackPath,
-                query: fallbackQuery
-            };
-        }
-    }
-
-    private sanitizeQuery(query: string): string {
-        if (!query) {
-            return '';
-        }
-
-        const sensitiveKeyPattern = /^(authorization|cookie|set-cookie|token)$/i;
-
-        try {
-            const params = new URLSearchParams(query);
-            const sanitized = new URLSearchParams();
-
-            params.forEach((value, key) => {
-                if (sensitiveKeyPattern.test(key)) {
-                    sanitized.append(key, '***');
-                } else {
-                    sanitized.append(key, value);
-                }
-            });
-
-            return sanitized.toString();
-        } catch {
-            return query;
-        }
-    }
-
-    private sanitizeBody(body: string): string {
-        if (!body) {
-            return '';
-        }
-
-        const sensitiveKeyPattern = /token/i;
-
-        try {
-            const parsed = JSON.parse(body);
-            const sanitizeObject = (value: unknown): unknown => {
-                if (Array.isArray(value)) {
-                    return value.map(item => sanitizeObject(item));
-                }
-
-                if (value && typeof value === 'object') {
-                    const record = value as Record<string, unknown>;
-                    const next: Record<string, unknown> = {};
-                    Object.entries(record).forEach(([key, innerValue]) => {
-                        next[key] = sensitiveKeyPattern.test(key)
-                            ? '***'
-                            : sanitizeObject(innerValue);
-                    });
-                    return next;
-                }
-
-                return value;
-            };
-
-            return JSON.stringify(sanitizeObject(parsed), null, 2);
-        } catch {
-            return body.replace(/("[^"]*token[^"]*"\s*:\s*")([^"]*)(")/ig, '$1***$3');
-        }
-    }
-
-    private sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
-        const sensitiveKeyPattern = /^(authorization|cookie|set-cookie|token)$/i;
-        const sanitized: Record<string, string> = {};
-
-        Object.entries(headers || {}).forEach(([key, value]) => {
-            const trimmedKey = key.trim();
-            if (!trimmedKey) {
-                return;
-            }
-
-            if (sensitiveKeyPattern.test(trimmedKey)) {
-                return;
-            }
-
-            sanitized[trimmedKey] = String(value ?? '');
-        });
-
-        return sanitized;
-    }
-
-    private fitStringToHistoryLimit(value: string | undefined, maxBytes: number): string {
-        if (!value) {
-            return '';
-        }
-
-        return Buffer.byteLength(value, 'utf8') > maxBytes ? '' : value;
-    }
-
-    private fitBase64ToHistoryLimit(valueBase64: string | undefined, maxBytes: number): string {
-        if (!valueBase64) {
-            return '';
-        }
-
-        try {
-            return Buffer.from(valueBase64, 'base64').length > maxBytes ? '' : valueBase64;
-        } catch {
-            return '';
-        }
-    }
-
-    private sanitizeFormDataFields(fields: FormDataField[] | undefined, maxBytes: number): RequestHistoryFormDataField[] | undefined {
-        if (!Array.isArray(fields)) {
-            return undefined;
-        }
-
-        const sensitiveKeyPattern = /token/i;
-        const sanitizedFields: RequestHistoryFormDataField[] = [];
-
-        for (const field of fields) {
-            const key = (field.key || '').trim();
-            if (!key) {
-                continue;
-            }
-
-            if (field.type === 'file') {
-                sanitizedFields.push({
-                    key,
-                    type: 'file',
-                    valueBase64: this.fitBase64ToHistoryLimit(field.valueBase64, maxBytes),
-                    fileName: field.fileName || '',
-                    contentType: field.contentType || 'application/octet-stream',
-                    enabled: true
-                });
-                continue;
-            }
-
-            sanitizedFields.push({
-                key,
-                type: 'text',
-                value: sensitiveKeyPattern.test(key) ? '***' : (field.value || ''),
-                enabled: true
-            });
-        }
-
-        return sanitizedFields;
-    }
-
-    private createResponseSnapshot(response: HttpResponse, maxBytes: number): RequestHistoryResponseSnapshot {
-        return {
-            success: response.success,
-            statusCode: typeof response.statusCode === 'number' ? response.statusCode : undefined,
-            headers: response.headers,
-            body: this.fitStringToHistoryLimit(response.body, maxBytes),
-            duration: response.duration,
-            error: response.error,
-            errorCode: response.errorCode
-        };
-    }
-
-    private async saveRequestHistory(
-        requestData: ApiConsoleRequestData,
-        response: HttpResponse
-    ): Promise<void> {
-        if (!this.isRequestHistoryEnabled()) {
-            return;
-        }
-
-        const { query: rawQuery } = this.extractPathAndQuery(
-            requestData.url,
-            requestData.path,
-            requestData.query
-        );
-        const endpointKey = this.getCurrentEndpointKey(requestData.baseUrl, requestData.method);
-        if (!endpointKey) {
-            return;
-        }
-
-        const query = this.sanitizeQuery(rawQuery);
-        const sanitizedBody = this.sanitizeBody(requestData.body || '');
-        const maxBodyBytes = this.getRequestHistoryMaxBodyBytes();
-        const body = Buffer.byteLength(sanitizedBody, 'utf8') > maxBodyBytes
-            ? ''
-            : sanitizedBody;
-        const token = requestData.token?.trim() || '';
-        const bodyMode = requestData.bodyMode === 'formdata' || requestData.bodyMode === 'binary'
-            ? requestData.bodyMode
-            : 'json';
-
-        const item: RequestHistoryItem = {
-            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            query,
-            body,
-            token,
-            timestamp: Date.now(),
-            statusCode: typeof response.statusCode === 'number' ? response.statusCode : null,
-            headers: this.sanitizeHeaders(requestData.headers || {}),
-            bodyMode,
-            binaryBodyBase64: bodyMode === 'binary'
-                ? this.fitBase64ToHistoryLimit(requestData.binaryBodyBase64, maxBodyBytes)
-                : undefined,
-            binaryContentType: bodyMode === 'binary' ? requestData.binaryContentType : undefined,
-            binaryFileName: bodyMode === 'binary' ? requestData.binaryFileName : undefined,
-            formDataFields: bodyMode === 'formdata'
-                ? this.sanitizeFormDataFields(requestData.formDataFields, maxBodyBytes)
-                : undefined,
-            response: this.createResponseSnapshot(response, maxBodyBytes)
-        };
-
-        await this.requestHistoryStore.addHistory(endpointKey, item, this.getHistoryLimit());
-    }
-
-    private async loadRequestHistory(baseUrl?: unknown): Promise<void> {
-        if (!this.isRequestHistoryEnabled()) {
-            this.panel.webview.postMessage({
-                type: 'requestHistoryLoaded',
-                data: []
-            });
-            return;
-        }
-
-        const endpointKey = this.getCurrentEndpointKey(typeof baseUrl === 'string' ? baseUrl : undefined);
-        if (!endpointKey) {
-            this.panel.webview.postMessage({
-                type: 'requestHistoryLoaded',
-                data: []
-            });
-            return;
-        }
-
-        const historyForWebView = await this.requestHistoryStore.getHistory(endpointKey);
-
-        this.panel.webview.postMessage({
-            type: 'requestHistoryLoaded',
-            data: historyForWebView
-        });
-    }
-
-    private async clearRequestHistory(baseUrl?: unknown): Promise<void> {
-        if (!this.isRequestHistoryEnabled()) {
-            this.panel.webview.postMessage({
-                type: 'requestHistoryLoaded',
-                data: []
-            });
-            return;
-        }
-
-        const endpointKey = this.getCurrentEndpointKey(typeof baseUrl === 'string' ? baseUrl : undefined);
-        if (!endpointKey) {
-            return;
-        }
-
-        await this.requestHistoryStore.clearEndpointHistory(endpointKey);
-        this.panel.webview.postMessage({
-            type: 'requestHistoryLoaded',
-            data: []
-        });
     }
 
     /**
@@ -1260,6 +899,102 @@ export class ApiConsolePanel {
         });
     }
 
+    private getRequestStateKey(baseUrl: string): string | null {
+        if (!this.currentApiEndpoint || !this.currentProjectPath) {
+            return null;
+        }
+
+        const normalizedBaseUrl = ApiConsolePanel.normalizeBaseUrl(baseUrl);
+        if (!normalizedBaseUrl) {
+            return null;
+        }
+
+        const method = (this.currentApiEndpoint.httpMethod || '').trim().toUpperCase();
+        const route = (this.currentApiEndpoint.routeTemplate || '').trim();
+        const action = (this.currentApiEndpoint.action || '').trim();
+        const projectPath = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
+
+        return `${projectPath}|${normalizedBaseUrl}|${method}|${route}|${action}`;
+    }
+
+    private static normalizeBaseUrl(baseUrl: string): string {
+        return baseUrl.trim().replace(/\/+$/, '').toLowerCase();
+    }
+
+    private static normalizeBearerTokenForHeader(token: string): string {
+        const trimmedToken = token.trim();
+        if (!trimmedToken) {
+            return '';
+        }
+
+        return trimmedToken.toLowerCase().startsWith('bearer ')
+            ? trimmedToken
+            : `Bearer ${trimmedToken}`;
+    }
+
+    private getHeadersForState(requestData: ApiConsoleRequestData): Record<string, string> {
+        const headersForState: Record<string, string> = {
+            ...(requestData.headers || {})
+        };
+
+        const normalizedAuthHeader = ApiConsolePanel.normalizeBearerTokenForHeader(
+            typeof requestData.token === 'string' ? requestData.token : ''
+        );
+
+        if (!normalizedAuthHeader) {
+            return headersForState;
+        }
+
+        for (const [headerKey, headerValue] of Object.entries(headersForState)) {
+            if (headerKey.trim().toLowerCase() !== 'authorization') {
+                continue;
+            }
+
+            if ((headerValue || '').trim() === normalizedAuthHeader) {
+                delete headersForState[headerKey];
+            }
+            break;
+        }
+
+        return headersForState;
+    }
+
+    private async saveRequestState(requestData: ApiConsoleRequestData, response: HttpResponse): Promise<void> {
+        const stateKey = this.getRequestStateKey(requestData.baseUrl || '');
+        if (!stateKey) {
+            return;
+        }
+
+        const snapshot: RequestStateSnapshot = {
+            baseUrl: requestData.baseUrl || '',
+            headers: this.getHeadersForState(requestData),
+            token: typeof requestData.token === 'string' ? requestData.token : '',
+            query: typeof requestData.query === 'string' ? requestData.query : '',
+            body: typeof requestData.body === 'string' ? requestData.body : '',
+            bodyMode: requestData.bodyMode === 'formdata' || requestData.bodyMode === 'binary'
+                ? requestData.bodyMode
+                : 'json',
+            binaryBodyBase64: requestData.binaryBodyBase64,
+            binaryContentType: requestData.binaryContentType,
+            binaryFileName: requestData.binaryFileName,
+            formDataFields: requestData.formDataFields,
+            response
+        };
+
+        await this.requestStateStore.saveState(stateKey, snapshot);
+    }
+
+    private async loadRequestState(baseUrl?: unknown): Promise<void> {
+        const requestedBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
+        const stateKey = this.getRequestStateKey(requestedBaseUrl);
+        const snapshot = stateKey ? this.requestStateStore.getState(stateKey) || null : null;
+
+        this.panel.webview.postMessage({
+            type: 'loadRequestState',
+            data: snapshot
+        });
+    }
+
     /**
      * 保存 Base URLs（同步更新内存，异步写入文件）
      */
@@ -1271,80 +1006,6 @@ export class ApiConsolePanel {
         this.baseUrlConfigManager.saveBaseUrls(this.currentProjectPath, baseUrls);
     }
 
-    private async loadProjectBearerToken(payload?: unknown): Promise<void> {
-        if (!this.currentProjectPath) {
-            this.panel.webview.postMessage({
-                type: 'loadProjectBearerToken',
-                data: ''
-            });
-            return;
-        }
-
-        const baseUrl = payload && typeof payload === 'object' && typeof (payload as { baseUrl?: unknown }).baseUrl === 'string'
-            ? (payload as { baseUrl: string }).baseUrl
-            : '';
-
-        if (!baseUrl.trim()) {
-            this.panel.webview.postMessage({
-                type: 'loadProjectBearerToken',
-                data: ''
-            });
-            return;
-        }
-
-        const storedToken = this.baseUrlConfigManager.getBearerToken(this.currentProjectPath, baseUrl);
-        if (storedToken) {
-            this.panel.webview.postMessage({
-                type: 'loadProjectBearerToken',
-                data: storedToken
-            });
-            return;
-        }
-
-        const storedTokens = this.context.workspaceState.get<Record<string, string>>(
-            ApiConsolePanel.projectBearerTokenStorageKey,
-            {}
-        );
-
-        const scopedKey = ApiConsolePanel.getProjectBearerTokenEntryKey(this.currentProjectPath, baseUrl);
-        const legacyProjectKey = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
-        this.panel.webview.postMessage({
-            type: 'loadProjectBearerToken',
-            data: storedTokens[scopedKey] || storedTokens[legacyProjectKey] || ''
-        });
-    }
-
-    private async saveProjectBearerToken(token: unknown): Promise<void> {
-        if (!this.currentProjectPath) {
-            return;
-        }
-
-        const payload = token && typeof token === 'object'
-            ? token as { baseUrl?: unknown; token?: unknown }
-            : undefined;
-        const baseUrl = typeof payload?.baseUrl === 'string' ? payload.baseUrl : '';
-        if (!baseUrl.trim()) {
-            return;
-        }
-
-        const trimmedToken = typeof payload?.token === 'string' ? payload.token.trim() : '';
-        this.baseUrlConfigManager.saveBearerToken(this.currentProjectPath, baseUrl, trimmedToken);
-
-        const storedTokens = {
-            ...this.context.workspaceState.get<Record<string, string>>(
-                ApiConsolePanel.projectBearerTokenStorageKey,
-                {}
-            )
-        };
-
-        const scopedKey = ApiConsolePanel.getProjectBearerTokenEntryKey(this.currentProjectPath, baseUrl);
-        const legacyProjectKey = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
-        delete storedTokens[scopedKey];
-        delete storedTokens[legacyProjectKey];
-
-        await this.context.workspaceState.update(ApiConsolePanel.projectBearerTokenStorageKey, storedTokens);
-    }
-
     /**
      * 释放资源
      */
@@ -1352,26 +1013,19 @@ export class ApiConsolePanel {
         if (ApiConsolePanel.currentPanel === this) {
             ApiConsolePanel.currentPanel = undefined;
         }
+
         const mappedPanel = ApiConsolePanel.panelByEndpointKey.get(this.endpointKey);
         if (mappedPanel === this) {
             ApiConsolePanel.panelByEndpointKey.delete(this.endpointKey);
         }
-        ApiConsolePanel.openPanels.delete(this);
-        ApiConsolePanel.panelById.delete(String(this.panelId));
-        ApiConsolePanel.onDidPanelsChangedEmitter.fire();
 
-        // 清理 HttpClient 资源（如果有的话）
-        if (this.httpClient && typeof (this.httpClient as any).dispose === 'function') {
-            (this.httpClient as any).dispose();
-        }
+        ApiConsolePanel.openPanels.delete(this);
 
         this.panel.dispose();
 
-        while (this.disposables.length) {
+        while (this.disposables.length > 0) {
             const disposable = this.disposables.pop();
-            if (disposable) {
-                disposable.dispose();
-            }
+            disposable?.dispose();
         }
     }
 }

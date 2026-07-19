@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.5] - 2026-07-19
+
+### 中文
+
+#### Added
+
+- 新增统一 Mock 按钮：基于运行中的 Swagger/OpenAPI 一次生成并填充 Query / Body / FormData 测试数据
+- 新增 Swagger Mock 配置项：`csharpApiConsole.swaggerJsonPaths`、`csharpApiConsole.swaggerAuthUsername`、`csharpApiConsole.swaggerAuthPassword`
+
+#### Changed
+
+- 测试面板 UI 重构优化：统一按钮布局到 Body/Auth/Headers/Query 标签行，改进标签高亮、响应区高度与滚动行为、JSON 高亮与可读性
+- Mock 合并策略优化：Query 中同名 key 保留用户当前 value，不再被 Mock 覆盖
+
+### English
+
+#### Added
+
+- Added a unified Mock button to generate and populate Query / Body / FormData test data from running Swagger/OpenAPI in one action
+- Added Swagger Mock settings: `csharpApiConsole.swaggerJsonPaths`, `csharpApiConsole.swaggerAuthUsername`, `csharpApiConsole.swaggerAuthPassword`
+
+#### Changed
+
+- Refactored and polished test panel UI: unified button placement on the Body/Auth/Headers/Query tab row, improved tab highlighting, response area sizing/scroll behavior, and JSON highlighting readability
+- Improved Mock merge strategy: existing Query values are preserved for duplicate keys instead of being overwritten by Mock
+
+## [1.1.4] - 2026-07-18
+
+### 中文
+
+#### Changed
+
+- 移除测试面板中的“历史记录”下拉与“清空”按钮，并删除对应请求历史保存/加载功能及相关配置项
+
+### English
+
+#### Changed
+
+- Removed the "History" dropdown and "Clear" button from the test panel, along with request history persistence/loading logic and related settings
+
 ## [1.1.3] - 2026-07-06
 
 ### 中文

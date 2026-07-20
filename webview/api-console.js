@@ -31,6 +31,7 @@
     let isMockAllLoading = false;
     let activeBaseUrlOptionIndex = -1;
     let panelSplitRatio = 0.5;
+    const PANEL_STACK_THRESHOLD = 980;
 
     function markRequestDirty() {
         if (!suppressRequestDirtyTracking) {
@@ -55,7 +56,10 @@
             return;
         }
 
-        if (window.innerWidth <= 949) {
+        const shouldStack = mainContent.clientWidth < PANEL_STACK_THRESHOLD;
+        mainContent.classList.toggle('stacked', shouldStack);
+
+        if (shouldStack) {
             leftPanel.style.flex = '';
             rightPanel.style.flex = '';
             leftPanel.style.width = '';
@@ -66,17 +70,22 @@
         const splitterWidth = 8;
         const containerWidth = mainContent.clientWidth;
         const availableWidth = Math.max(containerWidth - splitterWidth, 0);
-        const minPanelWidth = 320;
+        const minPanelWidth = 360;
 
-        const minRatio = availableWidth > 0 ? Math.min(0.45, minPanelWidth / availableWidth) : 0.2;
-        const maxRatio = availableWidth > 0 ? Math.max(0.55, 1 - (minPanelWidth / availableWidth)) : 0.8;
-        const safeMinRatio = Math.max(0.15, Math.min(minRatio, 0.5));
-        const safeMaxRatio = Math.min(0.85, Math.max(maxRatio, 0.5));
+        let leftWidth = minPanelWidth;
+        let rightWidth = minPanelWidth;
 
-        panelSplitRatio = Math.max(safeMinRatio, Math.min(safeMaxRatio, panelSplitRatio));
+        if (availableWidth >= minPanelWidth * 2) {
+            const minRatio = Math.min(0.45, minPanelWidth / availableWidth);
+            const maxRatio = Math.max(0.55, 1 - (minPanelWidth / availableWidth));
+            const safeMinRatio = Math.max(0.15, Math.min(minRatio, 0.5));
+            const safeMaxRatio = Math.min(0.85, Math.max(maxRatio, 0.5));
 
-        const leftWidth = Math.round(availableWidth * panelSplitRatio);
-        const rightWidth = Math.max(availableWidth - leftWidth, 0);
+            panelSplitRatio = Math.max(safeMinRatio, Math.min(safeMaxRatio, panelSplitRatio));
+
+            leftWidth = Math.round(availableWidth * panelSplitRatio);
+            rightWidth = Math.max(availableWidth - leftWidth, minPanelWidth);
+        }
 
         leftPanel.style.flex = '0 0 auto';
         rightPanel.style.flex = '0 0 auto';
@@ -94,7 +103,7 @@
         let dragging = false;
 
         const handlePointerMove = (event) => {
-            if (!dragging || window.innerWidth <= 949) {
+            if (!dragging) {
                 return;
             }
 
@@ -125,7 +134,7 @@
         };
 
         splitter.addEventListener('pointerdown', (event) => {
-            if (window.innerWidth <= 949) {
+            if (mainContent.classList.contains('stacked')) {
                 return;
             }
 
@@ -138,6 +147,12 @@
         });
 
         window.addEventListener('resize', applyPanelSplitRatio);
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(() => applyPanelSplitRatio());
+            observer.observe(mainContent);
+        }
+
         applyPanelSplitRatio();
     }
 
@@ -1388,6 +1403,10 @@
             return;
         }
 
+        const mockTooltip = t('bodyMode.mockTooltip') || 'Generate Query / Body / FormData mock data';
+        mockAllBtn.title = mockTooltip;
+        mockAllBtn.setAttribute('aria-label', mockTooltip);
+
         if (isMockAllLoading) {
             mockAllBtn.textContent = t('bodyMode.mocking') || 'Mocking...';
             mockAllBtn.disabled = true;
@@ -1692,7 +1711,9 @@
         document.getElementById('addQueryBtn').textContent = t('add');
         const mockAllBtn = document.getElementById('mockAllBtn');
         if (mockAllBtn) {
-            mockAllBtn.title = t('bodyMode.mock') || 'Mock';
+            const mockTooltip = t('bodyMode.mockTooltip') || 'Generate Query / Body / FormData mock data';
+            mockAllBtn.title = mockTooltip;
+            mockAllBtn.setAttribute('aria-label', mockTooltip);
         }
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
         const openResponseInEditorBtn = document.getElementById('openResponseInEditorBtn');

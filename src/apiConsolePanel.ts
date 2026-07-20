@@ -294,7 +294,8 @@ export class ApiConsolePanel {
         const requestBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
         const result = await this.openApiBodyMockService.generateAllFromSwagger(
             this.currentApiEndpoint,
-            requestBaseUrl
+            requestBaseUrl,
+            this.currentApiEndpoint.projectPath || this.currentProjectPath
         );
 
         this.panel.webview.postMessage({

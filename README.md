@@ -116,6 +116,12 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 若 Query 中已存在同名 Key，则保留用户当前 Value，不会被 Mock 覆盖（便于调试保留手工值）
   If a Query key already exists, the current user value is preserved and will not be overwritten by Mock (useful for debugging with manual values)
 
+- Swagger 文档会按项目持久化缓存到项目根目录的 `.vscode/` 下，默认文件名形如 `csharp-api-console-swagger-cache-*.json`
+  Swagger documents are persisted per project under the project's `.vscode/` folder, with a file name like `csharp-api-console-swagger-cache-*.json`
+
+- Mock 时优先读取本地缓存；如果缓存无法匹配当前接口，才会重新拉取 Swagger 并覆盖缓存
+  Mock generation prefers the local cache first; if the cache cannot match the current endpoint, Swagger is fetched again and the cache is overwritten
+
 ## ⚙️ 配置 | Configuration
 
 在 VS Code 设置中搜索 `C# API Console`:
@@ -155,11 +161,9 @@ Search for `C# API Console` in VS Code settings:
 
 ### `csharpApiConsole.swaggerJsonPaths`
 
-- **Default**: `[
-"/swagger/v1/swagger.json"
-]`
-  Mock 生成时在当前 Base URL 下尝试的 Swagger/OpenAPI JSON 相对路径。
-  Relative Swagger/OpenAPI JSON paths tried under the current Base URL for Mock generation.
+- **Default**: `"/swagger/v1/swagger.json"`
+  Mock 生成时在当前 Base URL 下使用的 Swagger/OpenAPI JSON 相对路径。
+  Relative Swagger/OpenAPI JSON path used under the current Base URL for Mock generation.
 
 ### `csharpApiConsole.swaggerAuthUsername`
 
@@ -201,6 +205,15 @@ Search for `C# API Console` in VS Code settings:
 ```
 <Project Root>/.vscode/csharp-api-console-config.json
 ```
+
+**Swagger 缓存文件位置 | Swagger Cache File Location**
+
+```text
+<Project Root>/.vscode/csharp-api-console-swagger-cache-*.json
+```
+
+说明：缓存是按项目隔离的，不按 Swagger 地址分 key。首次成功拉取后会写入缓存，后续 Mock 优先使用该缓存。
+Note: the cache is isolated per project and does not use Swagger URL as the key. After the first successful fetch, the cache is written and subsequent Mock requests prefer that cache.
 
 **示例文件内容 | Example file content**:
 

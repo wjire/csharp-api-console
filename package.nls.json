@@ -8,7 +8,7 @@
     "configuration.codeLensCacheMaxEntries.description": "Maximum CodeLens cache entries (per document/controller file). When exceeded, least recently used entries are evicted first.",
     "configuration.defaultApiVersion.description": "Default API version when controller has no [ApiVersion] attribute. Set to empty string to keep placeholder unreplaced.",
     "configuration.requestTimeoutSeconds.description": "HTTP request timeout in seconds. (<=0 = no timeout)",
-    "configuration.swaggerJsonPaths.description": "Relative Swagger/OpenAPI JSON paths to try under the current Base URL for Mock generation. The first default value is /swagger/v1/swagger.json.",
+    "configuration.swaggerJsonPaths.description": "Relative Swagger/OpenAPI JSON path to use under the current Base URL for Mock generation. Default: /swagger/v1/swagger.json.",
     "configuration.swaggerAuthUsername.description": "Username used when requesting Swagger/OpenAPI JSON under the current Base URL.",
     "configuration.swaggerAuthPassword.description": "Password used when requesting Swagger/OpenAPI JSON under the current Base URL.",
     "configuration.largeResponseThresholdKb.description": "Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.",

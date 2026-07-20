@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.6] - 2026-07-20
+
+### 中文
+
+#### Added
+
+- 新增项目级 Swagger 文档缓存：按项目持久化到 `.vscode/` 下，Mock 时优先读取本地缓存，必要时自动重新拉取并覆盖缓存
+
+#### Changed
+
+- 补充 README 中的 Mock 缓存说明与缓存文件位置，便于快速定位和理解缓存行为
+
+### English
+
+#### Added
+
+- Added project-scoped Swagger document caching: persisted under the project's `.vscode/` folder, with Mock preferring the local cache and automatically re-fetching and overwriting it when needed
+
+#### Changed
+
+- Documented the Mock cache behavior and cache file location in the README for easier discovery and understanding
+
 ## [1.1.5] - 2026-07-19
 
 ### 中文

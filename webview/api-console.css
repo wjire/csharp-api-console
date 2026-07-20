@@ -36,19 +36,50 @@ body {
 .main-content {
     display: flex;
     flex: 1;
-    overflow: hidden;
-    flex-wrap: wrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
     min-height: 0;
+}
+
+.main-content.stacked {
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .left-panel {
     flex: 1 1 450px;
+    min-width: 360px;
     overflow-y: auto;
     min-height: 0;
 }
 
+.main-content.stacked .left-panel,
+.main-content.stacked .right-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+}
+
+.main-content.stacked .left-panel {
+    min-height: 360px;
+    overflow-y: visible;
+}
+
+.main-content.stacked .right-panel {
+    min-height: 420px;
+    height: min(70vh, 760px);
+    border-top: 1px solid var(--vscode-panel-border);
+}
+
+.main-content.stacked .panel-splitter {
+    display: none;
+}
+
 .right-panel {
     flex: 1 1 450px;
+    min-width: 360px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -89,25 +120,6 @@ body {
 
     .right-panel {
         border-left: none;
-    }
-}
-
-/* 当宽度不够时，右面板换行到下方，显示上边框 */
-@media (max-width: 949px) {
-
-    .left-panel,
-    .right-panel {
-        flex: 1 1 100%;
-        max-width: 100%;
-    }
-
-    .panel-splitter {
-        display: none;
-    }
-
-    .right-panel {
-        border-left: none;
-        border-top: 1px solid var(--vscode-panel-border);
     }
 }
 
@@ -1538,31 +1550,14 @@ body.vscode-light .body-editor::-moz-selection {
     resize: none;
 }
 
-/* 📱 响应式布局：当宽度小于 900px 时，响应区域移到下面 */
-@media (max-width: 900px) {
-    .main-content {
-        flex-direction: column;
-        overflow-y: auto;
-    }
-
+/* 📱 更小屏幕优化：缩小后由脚本切换为上下分栏 */
+@media (max-width: 600px) {
     .left-panel {
-        flex: 0 0 auto;
-        max-height: 50vh;
-        min-height: 300px;
-        border-right: none;
-        border-bottom: 1px solid var(--vscode-panel-border);
+        min-width: 0;
     }
 
     .right-panel {
-        flex: 1;
-        min-height: 300px;
-    }
-}
-
-/* 📱 更小屏幕优化：当宽度小于 600px 时 */
-@media (max-width: 600px) {
-    .left-panel {
-        min-height: 200px;
+        min-width: 0;
     }
 
     .url-section {
@@ -1751,20 +1746,6 @@ body.vscode-light .panel-splitter::before {
 
     body.vscode-light .right-panel {
         border-left: none;
-    }
-}
-
-@media (max-width: 949px) {
-    body.vscode-light .right-panel {
-        border-left: none;
-        border-top: 1px solid var(--api-light-border);
-    }
-}
-
-@media (max-width: 900px) {
-    body.vscode-light .left-panel {
-        border-right: none;
-        border-bottom: 1px solid var(--api-light-border);
     }
 }
 

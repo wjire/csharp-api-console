@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {
@@ -101,13 +101,8 @@
                     "description": "%configuration.requestTimeoutSeconds.description%"
                 },
                 "csharpApiConsole.swaggerJsonPaths": {
-                    "type": "array",
-                    "default": [
-                        "/swagger/v1/swagger.json"
-                    ],
-                    "items": {
-                        "type": "string"
-                    },
+                    "type": "string",
+                    "default": "/swagger/v1/swagger.json",
                     "description": "%configuration.swaggerJsonPaths.description%"
                 },
                 "csharpApiConsole.swaggerAuthUsername": {

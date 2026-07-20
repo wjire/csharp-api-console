@@ -8,7 +8,7 @@
     "configuration.codeLensCacheMaxEntries.description": "CodeLens 缓存最大条目数（按文档/控制器文件计），超过后优先淘汰最近最少使用（LRU）的条目。",
     "configuration.defaultApiVersion.description": "控制器无 [ApiVersion] 特性时的默认版本。留空则不替换占位符。",
     "configuration.requestTimeoutSeconds.description": "HTTP 请求超时时间（秒）。（<=0 表示不设置超时）",
-    "configuration.swaggerJsonPaths.description": "Mock 生成时在当前 Base URL 下尝试的 Swagger/OpenAPI JSON 相对路径。默认第一个值是 /swagger/v1/swagger.json。",
+    "configuration.swaggerJsonPaths.description": "Mock 生成时在当前 Base URL 下使用的 Swagger/OpenAPI JSON 相对路径。默认值：/swagger/v1/swagger.json。",
     "configuration.swaggerAuthUsername.description": "请求当前 Base URL 下 Swagger/OpenAPI JSON 时使用的用户名。",
     "configuration.swaggerAuthPassword.description": "请求当前 Base URL 下 Swagger/OpenAPI JSON 时使用的密码。",
     "configuration.largeResponseThresholdKb.description": "大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。",

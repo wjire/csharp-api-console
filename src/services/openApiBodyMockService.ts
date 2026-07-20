@@ -3,6 +3,7 @@ import * as https from 'https';
 import * as vscode from 'vscode';
 import { lang } from '../languageManager';
 import { ApiEndpoint } from '../models/apiEndpoint';
+import { SwaggerDocumentCacheStore } from './swaggerDocumentCacheStore';
 
 export type MockQueryEntry = {
     key: string;
@@ -20,7 +21,7 @@ export type MockAllResult = {
     body?: string;
     queryEntries?: MockQueryEntry[];
     formDataEntries?: MockFormDataEntry[];
-    source?: 'swagger-url';
+    source?: 'swagger-url' | 'swagger-cache';
     swaggerUrl?: string;
     message?: string;
 };
@@ -33,9 +34,13 @@ type OpenApiDocument = {
 };
 
 export class OpenApiBodyMockService {
+    private static readonly swaggerFetchTimeoutMs = 30000;
+    private readonly swaggerCacheStore = new SwaggerDocumentCacheStore();
+
     public async generateAllFromSwagger(
         apiEndpoint: ApiEndpoint,
-        currentBaseUrl?: string
+        currentBaseUrl?: string,
+        projectPath?: string
     ): Promise<MockAllResult> {
         const method = (apiEndpoint.httpMethod || '').trim().toUpperCase();
         if (!method) {
@@ -53,19 +58,32 @@ export class OpenApiBodyMockService {
             };
         }
 
-        return this.tryGenerateAllFromSwaggerUrl(method, route, currentBaseUrl);
+        return this.tryGenerateAllFromSwaggerUrl(method, route, currentBaseUrl, projectPath);
     }
 
     private async tryGenerateAllFromSwaggerUrl(
         method: string,
         route: string,
-        currentBaseUrl?: string
+        currentBaseUrl?: string,
+        projectPath?: string
     ): Promise<MockAllResult> {
         const normalizedBaseUrl = this.normalizeBaseUrl(currentBaseUrl || '');
         if (!normalizedBaseUrl) {
             return {
                 success: false,
                 message: lang.t('mock.error.missingSwaggerBaseUrl')
+            };
+        }
+
+        const cachedResult = this.tryGenerateFromCachedDocument(method, route, projectPath);
+        if (cachedResult.matchedOperation) {
+            if (cachedResult.result) {
+                return cachedResult.result;
+            }
+
+            return {
+                success: false,
+                message: lang.t('mock.error.swaggerMatchedNoSchema')
             };
         }
 
@@ -77,6 +95,8 @@ export class OpenApiBodyMockService {
             if (!document) {
                 continue;
             }
+
+            this.saveDocumentToProjectCache(projectPath, candidateUrl, document);
 
             const operationContext = this.findOperationContext(document, method, route);
             if (!operationContext) {
@@ -122,35 +142,95 @@ export class OpenApiBodyMockService {
         };
     }
 
+    private tryGenerateFromCachedDocument(
+        method: string,
+        route: string,
+        projectPath?: string
+    ): { matchedOperation: boolean; result: MockAllResult | null } {
+        if (!projectPath) {
+            return { matchedOperation: false, result: null };
+        }
+
+        const cached = this.swaggerCacheStore.load(projectPath);
+        if (!cached?.document || typeof cached.document !== 'object') {
+            return { matchedOperation: false, result: null };
+        }
+
+        const document = cached.document as OpenApiDocument;
+        if (!document.paths || typeof document.paths !== 'object') {
+            return { matchedOperation: false, result: null };
+        }
+
+        const operationContext = this.findOperationContext(document, method, route);
+        if (!operationContext) {
+            return { matchedOperation: false, result: null };
+        }
+
+        const body = this.tryBuildBodyFromOperation(operationContext.operation, document);
+        const queryEntries = this.tryBuildQueryEntriesFromOperation(
+            operationContext.operation,
+            operationContext.pathItem,
+            document
+        );
+        const formDataEntries = this.tryBuildFormDataEntriesFromOperation(operationContext.operation, document);
+
+        if (!body && queryEntries.length === 0 && formDataEntries.length === 0) {
+            return { matchedOperation: true, result: null };
+        }
+
+        return {
+            matchedOperation: true,
+            result: {
+                success: true,
+                body: body || undefined,
+                queryEntries,
+                formDataEntries,
+                source: 'swagger-cache',
+                swaggerUrl: cached.sourceUrl || undefined
+            }
+        };
+    }
+
+    private saveDocumentToProjectCache(projectPath: string | undefined, sourceUrl: string, document: OpenApiDocument): void {
+        if (!projectPath || !document || typeof document !== 'object') {
+            return;
+        }
+
+        this.swaggerCacheStore.save(projectPath, sourceUrl, document as unknown as Record<string, unknown>);
+    }
+
     private buildSwaggerUrlCandidates(baseUrl: string): string[] {
         const normalized = this.normalizeBaseUrl(baseUrl);
         if (!normalized) {
             return [];
         }
 
-        const configuredPaths = this.getConfiguredSwaggerPaths();
-        if (configuredPaths.length > 0) {
-            return configuredPaths.map(item => this.joinSwaggerUrl(normalized, item));
+        const configuredPath = this.getConfiguredSwaggerPath();
+        if (configuredPath) {
+            return [this.joinSwaggerUrl(normalized, configuredPath)];
         }
 
         return [this.joinSwaggerUrl(normalized, '/swagger/v1/swagger.json')];
     }
 
-    private getConfiguredSwaggerPaths(): string[] {
+    private getConfiguredSwaggerPath(): string {
         const configValue = vscode.workspace.getConfiguration('csharpApiConsole').get<unknown>('swaggerJsonPaths');
 
+        // Backward compatibility for legacy array-based setting values.
         if (Array.isArray(configValue)) {
-            return configValue
+            const firstValid = configValue
                 .filter((item): item is string => typeof item === 'string')
                 .map(item => item.trim())
-                .filter(item => item.length > 0);
+                .find(item => item.length > 0);
+
+            return firstValid || '/swagger/v1/swagger.json';
         }
 
         if (typeof configValue === 'string' && configValue.trim()) {
-            return [configValue.trim()];
+            return configValue.trim();
         }
 
-        return ['/swagger/v1/swagger.json'];
+        return '/swagger/v1/swagger.json';
     }
 
     private joinSwaggerUrl(baseUrl: string, swaggerPath: string): string {
@@ -203,7 +283,7 @@ export class OpenApiBodyMockService {
 
     private async tryFetchOpenApiDocument(url: string): Promise<OpenApiDocument | null> {
         try {
-            const body = await this.httpGet(url, 3500);
+            const body = await this.httpGet(url, OpenApiBodyMockService.swaggerFetchTimeoutMs);
             const parsed = JSON.parse(body) as OpenApiDocument;
             if (!parsed || typeof parsed !== 'object' || !parsed.paths || typeof parsed.paths !== 'object') {
                 return null;

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.7] - 2026-07-20
+
+### 中文
+
+#### Changed
+
+- 优化 Base URL 下拉交互：下拉选项现在包含当前接口解析出的默认 Base URL（如 `http://localhost:xxxx`），切换到其他地址后仍可一键切回默认项；默认项不提供删除操作
+
+### English
+
+#### Changed
+
+- Improved Base URL dropdown behavior: options now include the endpoint-derived default Base URL (for example, `http://localhost:xxxx`), so you can switch back after choosing another URL; the default option is not removable
+
 ## [1.1.6] - 2026-07-20
 
 ### 中文

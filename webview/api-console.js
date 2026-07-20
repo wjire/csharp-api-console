@@ -360,7 +360,7 @@
             return;
         }
 
-        const mergedUrls = getNormalizedSavedBaseUrls();
+        const mergedUrls = getMergedBaseUrls();
         dropdown.innerHTML = '';
 
         mergedUrls.forEach((url) => {
@@ -368,27 +368,30 @@
             option.className = 'base-url-dropdown-option';
             option.dataset.value = url;
 
+            const isDefaultOption = normalizeBaseUrlKey(url) === normalizeBaseUrlKey(defaultBaseUrl);
+
             const label = document.createElement('span');
             label.className = 'base-url-dropdown-label';
             label.textContent = url;
 
-            const deleteBtn = document.createElement('button');
-            deleteBtn.type = 'button';
-            deleteBtn.className = 'base-url-dropdown-delete';
-            deleteBtn.textContent = t('remove') || 'Delete';
-            deleteBtn.title = t('remove') || 'Delete';
-            deleteBtn.addEventListener('mousedown', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-            });
-            deleteBtn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                removeSavedBaseUrl(url);
-            });
-
             option.appendChild(label);
-            option.appendChild(deleteBtn);
+            if (!isDefaultOption) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'base-url-dropdown-delete';
+                deleteBtn.textContent = t('remove') || 'Delete';
+                deleteBtn.title = t('remove') || 'Delete';
+                deleteBtn.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+                deleteBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeSavedBaseUrl(url);
+                });
+                option.appendChild(deleteBtn);
+            }
             option.addEventListener('mousedown', (event) => {
                 event.preventDefault();
             });

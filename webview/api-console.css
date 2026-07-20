@@ -147,10 +147,9 @@ body {
 .base-url-container {
     position: relative;
     display: flex;
-    flex: 0 1 auto;
-    width: 260px;
-    min-width: 160px;
-    max-width: 500px;
+    flex: 1.25 1 280px;
+    min-width: 200px;
+    max-width: 520px;
 }
 
 .http-method {
@@ -292,8 +291,8 @@ body {
 }
 
 .route-input {
-    flex: 1 1 auto;
-    min-width: 200px;
+    flex: 1 1 260px;
+    min-width: 140px;
     padding: 8px 12px;
     background-color: var(--vscode-input-background);
     color: var(--vscode-input-foreground);
@@ -434,6 +433,26 @@ body {
     transition: all 0.2s;
     color: var(--vscode-descriptionForeground);
     font-weight: 500;
+    position: relative;
+}
+
+.tab.has-badge::after {
+    content: attr(data-badge);
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background-color: var(--vscode-badge-background, #6b7280);
+    color: var(--vscode-badge-foreground, #ffffff);
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 700;
+    text-align: center;
+    transform: translate(45%, -45%);
+    pointer-events: none;
 }
 
 .tab:hover {

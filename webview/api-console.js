@@ -37,6 +37,78 @@
         if (!suppressRequestDirtyTracking) {
             hasUserEditedRequest = true;
         }
+
+        updateRequestTabBadges();
+    }
+
+    function setRequestTabBadge(tabName, hasData) {
+        const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+        if (!tab) {
+            return;
+        }
+
+        if (hasData) {
+            tab.setAttribute('data-badge', '1');
+            tab.classList.add('has-badge');
+            return;
+        }
+
+        tab.removeAttribute('data-badge');
+        tab.classList.remove('has-badge');
+    }
+
+    function hasBodyData() {
+        const bodyText = (document.getElementById('bodyEditor')?.value || '').trim();
+        if (bodyText.length > 0) {
+            return true;
+        }
+
+        if (restoredBinaryBodyBase64 || restoredBinaryFileName) {
+            return true;
+        }
+
+        const binaryFileInput = document.getElementById('binaryFileInput');
+        if (binaryFileInput?.files?.length) {
+            return true;
+        }
+
+        const formRows = Array.from(document.querySelectorAll('#formDataList .formdata-row'));
+        return formRows.some((row) => {
+            const key = (row.querySelector('.formdata-key')?.value || '').trim();
+            const textValue = (row.querySelector('.formdata-value-input')?.value || '').trim();
+            const fileInput = row.querySelector('.formdata-file-input');
+            const hasFile = !!(fileInput?.files?.length) || !!(row.dataset.valueBase64 || '').trim();
+            return key.length > 0 || textValue.length > 0 || hasFile;
+        });
+    }
+
+    function hasAuthData() {
+        return (document.getElementById('tokenInput')?.value || '').trim().length > 0;
+    }
+
+    function hasHeadersData() {
+        const rows = Array.from(document.querySelectorAll('#headersList .param-row'));
+        return rows.some((row) => {
+            const inputs = row.querySelectorAll('.param-input');
+            const key = (inputs[0]?.value || '').trim();
+            return key.length > 0;
+        });
+    }
+
+    function hasQueryData() {
+        const rows = Array.from(document.querySelectorAll('#queryList .param-row'));
+        return rows.some((row) => {
+            const inputs = row.querySelectorAll('.param-input');
+            const key = (inputs[0]?.value || '').trim();
+            return key.length > 0;
+        });
+    }
+
+    function updateRequestTabBadges() {
+        setRequestTabBadge('body', hasBodyData());
+        setRequestTabBadge('auth', hasAuthData());
+        setRequestTabBadge('headers', hasHeadersData());
+        setRequestTabBadge('query', hasQueryData());
     }
 
     function withSuppressedDirtyTracking(callback) {
@@ -930,6 +1002,7 @@
 
     function applyRequestState(state) {
         if (!state || typeof state !== 'object') {
+            updateRequestTabBadges();
             return;
         }
 
@@ -991,6 +1064,7 @@
         });
 
         hasUserEditedRequest = false;
+        updateRequestTabBadges();
     }
 
     document.getElementById('baseUrlInput')?.addEventListener('change', () => {
@@ -1114,6 +1188,7 @@
         const target = e.target;
         if (target.classList.contains('remove-button')) {
             target.closest('.param-row')?.remove();
+            updateRequestTabBadges();
         }
     });
 
@@ -1122,6 +1197,7 @@
         if (target.classList.contains('remove-button')) {
             target.closest('.param-row')?.remove();
             scheduleQueryQuickSyncFromRows();
+            updateRequestTabBadges();
         }
     });
 
@@ -1137,6 +1213,7 @@
         if (target.classList.contains('formdata-delete-btn')) {
             target.closest('.formdata-row')?.remove();
             ensureFormDataHasAtLeastOneRow();
+            updateRequestTabBadges();
             return;
         }
 
@@ -1154,6 +1231,7 @@
                     fileInput.value = '';
                 }
                 updateFormDataFileName(row);
+                updateRequestTabBadges();
             }
         }
     });
@@ -1167,6 +1245,7 @@
                 row.dataset.fieldType = selectedType;
                 updateFormDataRowMode(row);
             }
+            updateRequestTabBadges();
             return;
         }
 
@@ -1174,6 +1253,7 @@
             const row = target.closest('.formdata-row');
             if (row) {
                 updateFormDataFileName(row);
+                updateRequestTabBadges();
             }
         }
     });
@@ -1305,6 +1385,7 @@
         });
 
         ensureFormDataHasAtLeastOneRow();
+        updateRequestTabBadges();
     }
 
     async function collectFormDataFields() {
@@ -1431,6 +1512,7 @@
         updateBinaryFileNameDisplay();
 
         updateJsonValidityIndicator();
+        updateRequestTabBadges();
     });
 
     document.getElementById('debugButton')?.addEventListener('click', () => {
@@ -1982,6 +2064,7 @@
                 } else {
                     showToast(result.message || t('bodyMode.mockFailed') || 'No mock data available for this endpoint', 'info');
                 }
+                updateRequestTabBadges();
                 break;
             }
         }
@@ -2034,6 +2117,7 @@
 
         updateBodyEditorVisualState();
         requestRequestStateForCurrentBaseUrl();
+        updateRequestTabBadges();
     }
 
     // Update API endpoint (when switching between different APIs)

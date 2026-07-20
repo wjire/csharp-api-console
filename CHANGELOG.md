@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.8] - 2026-07-20
+
+### 中文
+
+#### Changed
+
+- UI 优化：调整 Base URL 输入区域宽度与自适应表现，提升可读性
+- UI 优化：Mock 按钮悬浮提示补充首次拉取 Swagger 并写入缓存的说明
+- UI 优化：请求区 Body/Auth/Headers/Query 标签新增右上角数据角标（有数据显示 `1`）
+
+### English
+
+#### Changed
+
+- UI polish: adjusted Base URL input width and responsive behavior for better readability
+- UI polish: enhanced Mock tooltip with first-fetch Swagger caching hint
+- UI polish: added top-right data badges on request tabs (Body/Auth/Headers/Query, show `1` when data exists)
+
 ## [1.1.7] - 2026-07-20
 
 ### 中文

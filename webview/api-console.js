@@ -681,6 +681,31 @@
                 baseUrl
             }
         });
+
+        vscode.postMessage({
+            type: 'requestSharedAuth',
+            data: {
+                baseUrl
+            }
+        });
+    }
+
+    function saveSharedAuthForCurrentBaseUrl() {
+        const baseUrl = getCurrentBaseUrl().trim();
+        if (!baseUrl) {
+            return;
+        }
+
+        const tokenInput = document.getElementById('tokenInput');
+        const token = tokenInput ? tokenInput.value : '';
+
+        vscode.postMessage({
+            type: 'saveSharedAuth',
+            data: {
+                baseUrl,
+                token
+            }
+        });
     }
 
     function ensureCurrentBaseUrlSaved(baseUrl) {
@@ -1011,17 +1036,10 @@
                 setCurrentBaseUrl(state.baseUrl);
             }
 
-            const restoredToken = typeof state.token === 'string' ? state.token : '';
-
-            const tokenInput = document.getElementById('tokenInput');
-            if (tokenInput) {
-                tokenInput.value = restoredToken;
-            }
-
             const headersList = document.getElementById('headersList');
             if (headersList) {
                 headersList.innerHTML = '';
-                buildRestoredHeaders(state.headers, restoredToken).forEach(([key, value]) => {
+                buildRestoredHeaders(state.headers, '').forEach(([key, value]) => {
                     addHeaderRow(key, String(value ?? ''));
                 });
             }
@@ -1070,6 +1088,10 @@
     document.getElementById('baseUrlInput')?.addEventListener('change', () => {
         hasUserEditedRequest = false;
         requestRequestStateForCurrentBaseUrl();
+    });
+    document.getElementById('tokenInput')?.addEventListener('input', () => {
+        saveSharedAuthForCurrentBaseUrl();
+        updateRequestTabBadges();
     });
 
     document.getElementById('baseUrlInput')?.addEventListener('keydown', (event) => {
@@ -1679,6 +1701,7 @@
         ensureCurrentBaseUrlSaved(baseUrl);
         const route = document.getElementById('routeInput').value;
         const token = document.getElementById('tokenInput').value;
+        saveSharedAuthForCurrentBaseUrl();
 
         // Collect headers
         const headers = {};
@@ -1966,6 +1989,14 @@
             case 'loadRequestState':
                 applyRequestState(message.data);
                 break;
+            case 'loadSharedAuth': {
+                const tokenInput = document.getElementById('tokenInput');
+                if (tokenInput) {
+                    tokenInput.value = typeof message.data?.token === 'string' ? message.data.token : '';
+                }
+                updateRequestTabBadges();
+                break;
+            }
             case 'renderSettings': {
                 const settings = message.data || {};
                 const threshold = Number(settings.largeResponseThresholdBytes);

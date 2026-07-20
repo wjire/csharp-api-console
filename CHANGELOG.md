@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.9] - 2026-07-20
+
+### 中文
+
+#### Changed
+
+- 体验优化：Auth 改为按项目 + Base URL 共享，切换接口时无需重复输入；请求快照不再保存接口级 Token
+
+### English
+
+#### Changed
+
+- UX improvement: Auth is now shared by project + Base URL, so switching endpoints no longer requires re-entering it; request snapshots no longer keep endpoint-level tokens
+
 ## [1.1.8] - 2026-07-20
 
 ### 中文

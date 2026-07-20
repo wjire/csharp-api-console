@@ -261,8 +261,14 @@ export class ApiConsolePanel {
             case 'requestRequestState':
                 await this.loadRequestState(message.data?.baseUrl);
                 break;
+            case 'requestSharedAuth':
+                await this.loadSharedAuth(message.data?.baseUrl);
+                break;
             case 'saveBaseUrls':
                 await this.saveBaseUrls(message.data);
+                break;
+            case 'saveSharedAuth':
+                await this.saveSharedAuth(message.data?.baseUrl, message.data?.token);
                 break;
             case 'startDebug':
                 await this.startDebugSession();
@@ -401,6 +407,7 @@ export class ApiConsolePanel {
 
         await this.loadBaseUrls();
         await this.loadRequestState();
+        await this.loadSharedAuth();
         this.postDebugStatus(this.isCurrentProjectDebugRunning() ? 'running' : 'idle');
     }
 
@@ -788,6 +795,8 @@ export class ApiConsolePanel {
      * 发送 HTTP 请求
      */
     private async sendHttpRequest(requestData: ApiConsoleRequestData) {
+        await this.saveSharedAuth(requestData.baseUrl, requestData.token);
+
         // 使用 HttpClient 服务发送请求
         const response = await this.httpClient.sendRequest({
             ...requestData,
@@ -969,7 +978,7 @@ export class ApiConsolePanel {
         const snapshot: RequestStateSnapshot = {
             baseUrl: requestData.baseUrl || '',
             headers: this.getHeadersForState(requestData),
-            token: typeof requestData.token === 'string' ? requestData.token : '',
+            token: '',
             query: typeof requestData.query === 'string' ? requestData.query : '',
             body: typeof requestData.body === 'string' ? requestData.body : '',
             bodyMode: requestData.bodyMode === 'formdata' || requestData.bodyMode === 'binary'
@@ -994,6 +1003,30 @@ export class ApiConsolePanel {
             type: 'loadRequestState',
             data: snapshot
         });
+    }
+
+    private async loadSharedAuth(baseUrl?: unknown): Promise<void> {
+        const requestedBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
+        const token = this.currentProjectPath
+            ? this.baseUrlConfigManager.getAuthToken(this.currentProjectPath, requestedBaseUrl)
+            : '';
+
+        this.panel.webview.postMessage({
+            type: 'loadSharedAuth',
+            data: {
+                token
+            }
+        });
+    }
+
+    private async saveSharedAuth(baseUrl: unknown, token: unknown): Promise<void> {
+        if (!this.currentProjectPath) {
+            return;
+        }
+
+        const normalizedBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
+        const normalizedToken = typeof token === 'string' ? token : '';
+        this.baseUrlConfigManager.saveAuthToken(this.currentProjectPath, normalizedBaseUrl, normalizedToken);
     }
 
     /**

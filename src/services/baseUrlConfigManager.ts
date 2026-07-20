@@ -3,6 +3,7 @@ import * as path from 'path';
 
 interface PersistedConfig {
     baseUrls?: Record<string, string[]>;
+    authTokens?: Record<string, Record<string, string>>;
 }
 
 /**
@@ -11,7 +12,8 @@ interface PersistedConfig {
  */
 export class BaseUrlConfigManager {
     private static readonly CONFIG_FILE_NAME = 'csharp-api-console-config.json';
-    private configData: Record<string, string[]> = {}; // 内存中的配置数据
+    private baseUrlsData: Record<string, string[]> = {};
+    private authTokensData: Record<string, Record<string, string>> = {};
     private configFilePath: string;
     private writeTimer: NodeJS.Timeout | null = null;
     private readonly WRITE_DELAY = 500; // 防抖延迟（毫秒）
@@ -41,17 +43,20 @@ export class BaseUrlConfigManager {
      */
     private loadConfigToMemory(): void {
         if (!fs.existsSync(this.configFilePath)) {
-            this.configData = {};
+            this.baseUrlsData = {};
+            this.authTokensData = {};
             return;
         }
 
         try {
             const content = fs.readFileSync(this.configFilePath, 'utf-8');
             const config = JSON.parse(content) as PersistedConfig;
-            this.configData = config.baseUrls || {};
+            this.baseUrlsData = config.baseUrls || {};
+            this.authTokensData = config.authTokens || {};
         } catch (error) {
             console.error('[BaseUrlConfigManager] Failed to load config:', error);
-            this.configData = {};
+            this.baseUrlsData = {};
+            this.authTokensData = {};
         }
     }
 
@@ -63,7 +68,7 @@ export class BaseUrlConfigManager {
      * 获取指定项目的 Base URLs（同步操作，从内存读取）
      */
     public getBaseUrls(projectPath: string): string[] {
-        return this.configData[projectPath] || [];
+        return this.baseUrlsData[projectPath] || [];
     }
 
     /**
@@ -71,7 +76,51 @@ export class BaseUrlConfigManager {
      */
     public saveBaseUrls(projectPath: string, baseUrls: string[]): void {
         // 1. 同步更新内存
-        this.configData[projectPath] = baseUrls;
+        this.baseUrlsData[projectPath] = baseUrls;
+
+        // 2. 异步写入文件（防抖）
+        this.scheduleFileWrite();
+    }
+
+    public getAuthToken(projectPath: string, baseUrl: string): string {
+        const normalizedProjectPath = (projectPath || '').trim();
+        const normalizedBaseUrl = this.normalizeBaseUrlKey(baseUrl);
+        if (!normalizedProjectPath || !normalizedBaseUrl) {
+            return '';
+        }
+
+        return this.authTokensData[normalizedProjectPath]?.[normalizedBaseUrl] || '';
+    }
+
+    public saveAuthToken(projectPath: string, baseUrl: string, token: string): void {
+        const normalizedProjectPath = (projectPath || '').trim();
+        const normalizedBaseUrl = this.normalizeBaseUrlKey(baseUrl);
+        if (!normalizedProjectPath || !normalizedBaseUrl) {
+            return;
+        }
+
+        const normalizedToken = typeof token === 'string' ? token.trim() : '';
+        const existingProjectTokens = this.authTokensData[normalizedProjectPath] || {};
+
+        if (!normalizedToken) {
+            if (!existingProjectTokens[normalizedBaseUrl]) {
+                return;
+            }
+
+            delete existingProjectTokens[normalizedBaseUrl];
+            if (Object.keys(existingProjectTokens).length === 0) {
+                delete this.authTokensData[normalizedProjectPath];
+            } else {
+                this.authTokensData[normalizedProjectPath] = existingProjectTokens;
+            }
+            this.scheduleFileWrite();
+            return;
+        }
+
+        this.authTokensData[normalizedProjectPath] = {
+            ...existingProjectTokens,
+            [normalizedBaseUrl]: normalizedToken
+        };
 
         // 2. 异步写入文件（防抖）
         this.scheduleFileWrite();
@@ -103,7 +152,8 @@ export class BaseUrlConfigManager {
 
         try {
             const config: PersistedConfig = {
-                baseUrls: this.configData
+                baseUrls: this.baseUrlsData,
+                authTokens: this.authTokensData
             };
             fs.writeFileSync(this.configFilePath, JSON.stringify(config, null, 2), 'utf-8');
         } catch (error) {
@@ -116,7 +166,8 @@ export class BaseUrlConfigManager {
      */
     public getAllConfig(): PersistedConfig {
         return {
-            baseUrls: { ...this.configData }
+            baseUrls: { ...this.baseUrlsData },
+            authTokens: { ...this.authTokensData }
         };
     }
 

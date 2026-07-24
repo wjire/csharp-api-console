@@ -1070,7 +1070,7 @@
             } else {
                 const bodyEditor = document.getElementById('bodyEditor');
                 if (bodyEditor) {
-                    bodyEditor.value = formatJsonBodyIfPossible(typeof state.body === 'string' ? state.body : '');
+                    bodyEditor.value = typeof state.body === 'string' ? state.body : '';
                     updateBodyEditorVisualState();
                 }
                 activateBodyMode('json');

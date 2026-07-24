@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.0] - 2026-07-24
+
+### 中文
+
+#### Fixed
+
+- 修复打开测试面板回显上次请求数据时 long 数值显示错误的问题：恢复 Body 时保留原始文本，避免精度丢失
+
+### English
+
+#### Fixed
+
+- Fixed incorrect long number rendering when restoring the last request in the test panel: keep original Body text during restore to avoid precision loss
+
 ## [1.1.9] - 2026-07-20
 
 ### 中文

@@ -1542,7 +1542,10 @@
         updateDebugButton();
 
         vscode.postMessage({
-            type: 'startDebug'
+            type: 'startDebug',
+            data: {
+                baseUrl: getCurrentBaseUrl()
+            }
         });
     });
 

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.1] - 2026-07-24
+
+### 中文
+
+#### Changed
+
+- Mock 体验优化：调试启动成功后会静默预拉 Swagger 并更新缓存；若用户同时点击 Mock，会复用同一个在途请求并等待完成
+- 缓存写入优化：Swagger 缓存改为原子更新，降低并发读取时的中间态风险
+- 并发策略优化：Swagger 拉取请求按“项目”维度去重，同一项目同一时刻仅保留一个在途请求
+- 配置项新增：`csharpApiConsole.silentSwaggerPrefetchOnDebugStart`（默认开启），可控制是否在调试启动后静默预拉 Swagger
+
+### English
+
+#### Changed
+
+- Mock UX improvement: after debug starts successfully, Swagger is prefetched silently and cache is refreshed; if Mock is clicked during fetch, it reuses the same in-flight request and waits for completion
+- Cache write improvement: Swagger cache updates are now atomic to reduce partial-read risk under concurrency
+- Concurrency strategy improvement: Swagger fetch requests are deduplicated at project scope, so only one in-flight request exists per project at a time
+- Added setting: `csharpApiConsole.silentSwaggerPrefetchOnDebugStart` (enabled by default) to control silent Swagger prefetch after debug start
+
 ## [1.2.0] - 2026-07-24
 
 ### 中文

@@ -69,7 +69,14 @@ export class SwaggerDocumentCacheStore {
                 document
             };
 
-            fs.writeFileSync(cacheFilePath, JSON.stringify(payload, null, 2), 'utf8');
+            const serialized = JSON.stringify(payload, null, 2);
+            const tempFilePath = `${cacheFilePath}.${process.pid}.${Date.now()}.tmp`;
+            fs.writeFileSync(tempFilePath, serialized, 'utf8');
+
+            if (fs.existsSync(cacheFilePath)) {
+                fs.rmSync(cacheFilePath, { force: true });
+            }
+            fs.renameSync(tempFilePath, cacheFilePath);
         } catch {
             // Ignore cache write failures to avoid affecting normal mock flow.
         }

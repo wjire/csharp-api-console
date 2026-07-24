@@ -11,6 +11,7 @@
     "configuration.swaggerJsonPaths.description": "Relative Swagger/OpenAPI JSON path to use under the current Base URL for Mock generation. Default: /swagger/v1/swagger.json.",
     "configuration.swaggerAuthUsername.description": "Username used when requesting Swagger/OpenAPI JSON under the current Base URL.",
     "configuration.swaggerAuthPassword.description": "Password used when requesting Swagger/OpenAPI JSON under the current Base URL.",
+    "configuration.silentSwaggerPrefetchOnDebugStart.description": "Whether to silently prefetch Swagger/OpenAPI JSON after debug starts. If enabled, Mock can reuse this in-flight request. Default: enabled.",
     "configuration.largeResponseThresholdKb.description": "Large response rendering threshold in KB. Responses above this value use plain-text fallback rendering.",
     "configuration.maxResponseLineNumbers.description": "Maximum response line numbers rendered in the UI.",
     "configuration.jsonIndentSpaces.description": "JSON indentation spaces used in request formatting and response pretty-printing. Only 2 or 4 are supported."

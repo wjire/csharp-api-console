@@ -35,7 +35,25 @@ type OpenApiDocument = {
 
 export class OpenApiBodyMockService {
     private static readonly swaggerFetchTimeoutMs = 30000;
+    private static readonly inflightSwaggerRequests = new Map<string, Promise<OpenApiDocument | null>>();
     private readonly swaggerCacheStore = new SwaggerDocumentCacheStore();
+
+    public async prefetchSwaggerForBaseUrl(currentBaseUrl?: string, projectPath?: string): Promise<void> {
+        const normalizedBaseUrl = this.normalizeBaseUrl(currentBaseUrl || '');
+        if (!normalizedBaseUrl || !projectPath) {
+            return;
+        }
+
+        const candidates = this.buildSwaggerUrlCandidates(normalizedBaseUrl);
+        if (candidates.length === 0) {
+            return;
+        }
+
+        // Debug-start prefetch always refreshes cache from remote.
+        for (const candidateUrl of candidates) {
+            await this.ensureOpenApiDocument(candidateUrl, projectPath, true);
+        }
+    }
 
     public async generateAllFromSwagger(
         apiEndpoint: ApiEndpoint,
@@ -75,6 +93,11 @@ export class OpenApiBodyMockService {
             };
         }
 
+        const candidates = this.buildSwaggerUrlCandidates(normalizedBaseUrl);
+
+        // If background prefetch is in progress for the same Swagger URL, wait for it first.
+        await this.waitForInflightRequests(projectPath);
+
         const cachedResult = this.tryGenerateFromCachedDocument(method, route, projectPath);
         if (cachedResult.matchedOperation) {
             if (cachedResult.result) {
@@ -87,16 +110,13 @@ export class OpenApiBodyMockService {
             };
         }
 
-        const candidates = this.buildSwaggerUrlCandidates(normalizedBaseUrl);
         let matchedOperationWithoutMockData = false;
 
         for (const candidateUrl of candidates) {
-            const document = await this.tryFetchOpenApiDocument(candidateUrl);
+            const document = await this.ensureOpenApiDocument(candidateUrl, projectPath, false);
             if (!document) {
                 continue;
             }
-
-            this.saveDocumentToProjectCache(projectPath, candidateUrl, document);
 
             const operationContext = this.findOperationContext(document, method, route);
             if (!operationContext) {
@@ -197,6 +217,76 @@ export class OpenApiBodyMockService {
         }
 
         this.swaggerCacheStore.save(projectPath, sourceUrl, document as unknown as Record<string, unknown>);
+    }
+
+    private async waitForInflightRequests(projectPath?: string): Promise<void> {
+        const requestKey = this.getSwaggerRequestKey('', projectPath);
+        if (!requestKey) {
+            return;
+        }
+
+        const inflight = OpenApiBodyMockService.inflightSwaggerRequests.get(requestKey);
+        const waits = inflight ? [inflight] : [];
+
+        if (waits.length > 0) {
+            await Promise.allSettled(waits);
+        }
+    }
+
+    private getSwaggerRequestKey(swaggerUrl: string, projectPath?: string): string {
+        const normalizedProjectPath = (projectPath || '').trim().toLowerCase();
+        if (normalizedProjectPath) {
+            return normalizedProjectPath;
+        }
+
+        const normalizedSwaggerUrl = (swaggerUrl || '').trim().toLowerCase();
+        return normalizedSwaggerUrl ? `url:${normalizedSwaggerUrl}` : '';
+    }
+
+    private async ensureOpenApiDocument(
+        swaggerUrl: string,
+        projectPath?: string,
+        forceRefresh: boolean = false
+    ): Promise<OpenApiDocument | null> {
+        if (!swaggerUrl) {
+            return null;
+        }
+
+        if (!forceRefresh && projectPath) {
+            const cached = this.swaggerCacheStore.load(projectPath);
+            const cachedDocument = cached?.document as OpenApiDocument | undefined;
+            if (cachedDocument
+                && typeof cachedDocument === 'object'
+                && cached?.sourceUrl === swaggerUrl
+                && cachedDocument.paths
+                && typeof cachedDocument.paths === 'object') {
+                return cachedDocument;
+            }
+        }
+
+        const requestKey = this.getSwaggerRequestKey(swaggerUrl, projectPath);
+        const existing = OpenApiBodyMockService.inflightSwaggerRequests.get(requestKey);
+        if (existing) {
+            return existing;
+        }
+
+        const fetchPromise = (async () => {
+            const document = await this.tryFetchOpenApiDocument(swaggerUrl);
+            if (document) {
+                this.saveDocumentToProjectCache(projectPath, swaggerUrl, document);
+            }
+            return document;
+        })();
+
+        OpenApiBodyMockService.inflightSwaggerRequests.set(requestKey, fetchPromise);
+        try {
+            return await fetchPromise;
+        } finally {
+            const current = OpenApiBodyMockService.inflightSwaggerRequests.get(requestKey);
+            if (current === fetchPromise) {
+                OpenApiBodyMockService.inflightSwaggerRequests.delete(requestKey);
+            }
+        }
     }
 
     private buildSwaggerUrlCandidates(baseUrl: string): string[] {

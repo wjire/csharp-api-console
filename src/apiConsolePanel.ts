@@ -47,6 +47,7 @@ export class ApiConsolePanel {
     private readonly panelId: number;
     private currentProjectPath: string = '';
     private currentApiEndpoint: ApiEndpoint | null = null;
+    private latestKnownBaseUrl: string = '';
     private endpointKey: string;
     private tabPinned = false;
     private static readonly debugSessionPrefix = 'C# API Console';
@@ -67,6 +68,7 @@ export class ApiConsolePanel {
         for (const panel of ApiConsolePanel.openPanels) {
             if (panel.matchesProjectPath(config.projectPath)) {
                 panel.postDebugStatus('running');
+                void panel.triggerSwaggerPrefetch();
             }
         }
     }
@@ -271,7 +273,7 @@ export class ApiConsolePanel {
                 await this.saveSharedAuth(message.data?.baseUrl, message.data?.token);
                 break;
             case 'startDebug':
-                await this.startDebugSession();
+                await this.startDebugSession(message.data?.baseUrl);
                 break;
             case 'backToAction':
                 await this.backToAction();
@@ -298,6 +300,7 @@ export class ApiConsolePanel {
         }
 
         const requestBaseUrl = typeof baseUrl === 'string' ? baseUrl : '';
+        this.latestKnownBaseUrl = this.normalizeClientBaseUrl(requestBaseUrl);
         const result = await this.openApiBodyMockService.generateAllFromSwagger(
             this.currentApiEndpoint,
             requestBaseUrl,
@@ -456,7 +459,7 @@ export class ApiConsolePanel {
     /**
      * 启动调试会话（携带 launchSettings.json 环境变量）
      */
-    private async startDebugSession(): Promise<void> {
+    private async startDebugSession(baseUrl?: unknown): Promise<void> {
         if (!this.currentProjectPath) {
             this.postDebugStatus('error', lang.t('webview.debug.noProject'));
             return;
@@ -466,6 +469,8 @@ export class ApiConsolePanel {
             this.postDebugStatus('running', lang.t('webview.debug.alreadyRunning'));
             return;
         }
+
+        this.latestKnownBaseUrl = this.normalizeClientBaseUrl(typeof baseUrl === 'string' ? baseUrl : '');
 
         this.postDebugStatus('starting');
 
@@ -523,6 +528,7 @@ export class ApiConsolePanel {
             ApiConsolePanel.runningProjectPaths.add(normalizedProjectPath);
 
             this.postDebugStatus('running', lang.t('webview.debug.started'));
+            void this.triggerSwaggerPrefetch();
         } catch (error) {
             const message = error instanceof Error && error.message
                 ? `${lang.t('webview.debug.failed')}: ${error.message}`
@@ -929,6 +935,52 @@ export class ApiConsolePanel {
 
     private static normalizeBaseUrl(baseUrl: string): string {
         return baseUrl.trim().replace(/\/+$/, '').toLowerCase();
+    }
+
+    private normalizeClientBaseUrl(baseUrl: string): string {
+        return baseUrl.trim().replace(/\/+$/, '');
+    }
+
+    private getSwaggerPrefetchBaseUrl(): string {
+        const latest = this.normalizeClientBaseUrl(this.latestKnownBaseUrl);
+        if (latest) {
+            return latest;
+        }
+
+        const fullUrl = (this.currentApiEndpoint?.fullUrl || '').trim();
+        const urlMatch = fullUrl.match(/^(https?:\/\/[^\/]+)(?:\/.*)?$/i);
+        if (urlMatch?.[1]) {
+            return this.normalizeClientBaseUrl(urlMatch[1]);
+        }
+
+        return '';
+    }
+
+    private async triggerSwaggerPrefetch(): Promise<void> {
+        if (!this.isSilentSwaggerPrefetchEnabled()) {
+            return;
+        }
+
+        if (!this.currentProjectPath) {
+            return;
+        }
+
+        const baseUrl = this.getSwaggerPrefetchBaseUrl();
+        if (!baseUrl) {
+            return;
+        }
+
+        try {
+            await this.openApiBodyMockService.prefetchSwaggerForBaseUrl(baseUrl, this.currentProjectPath);
+        } catch (error) {
+            console.error('[ApiConsolePanel] Silent swagger prefetch failed:', error);
+        }
+    }
+
+    private isSilentSwaggerPrefetchEnabled(): boolean {
+        return vscode.workspace
+            .getConfiguration('csharpApiConsole')
+            .get<boolean>('silentSwaggerPrefetchOnDebugStart', true);
     }
 
     private static normalizeBearerTokenForHeader(token: string): string {

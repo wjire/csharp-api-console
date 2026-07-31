@@ -2,7 +2,7 @@
     "name": "csharp-api-console",
     "displayName": "%extension.displayName%",
     "description": "%extension.description%",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "publisher": "dankit",
     "icon": "resources/icons/icon.png",
     "repository": {

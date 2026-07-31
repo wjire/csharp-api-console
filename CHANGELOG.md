@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.2] - 2026-07-31
+
+### 中文
+
+#### Fixed
+
+- 修复 Swagger/OpenAPI 路由匹配中的版本段兼容问题：`v1`、`v1.0`、`v1.0.0` 等常见零小版本格式现在会视为等价，避免 Mock 因版本写法不同而匹配失败
+
+### English
+
+#### Fixed
+
+- Fixed version-segment compatibility in Swagger/OpenAPI route matching: common zero-minor formats such as `v1`, `v1.0`, and `v1.0.0` are now treated as equivalent, preventing Mock mismatches caused by version format differences
+
 ## [1.2.1] - 2026-07-24
 
 ### 中文

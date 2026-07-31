@@ -850,12 +850,37 @@ export class OpenApiBodyMockService {
                 continue;
             }
 
+            if (this.areVersionSegmentsEquivalent(ls, rs)) {
+                continue;
+            }
+
             if (ls !== rs) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private areVersionSegmentsEquivalent(leftSegment: string, rightSegment: string): boolean {
+        const normalizedLeft = this.normalizeVersionSegment(leftSegment);
+        const normalizedRight = this.normalizeVersionSegment(rightSegment);
+        return normalizedLeft === normalizedRight;
+    }
+
+    private normalizeVersionSegment(segment: string): string {
+        const normalized = (segment || '').trim().toLowerCase();
+        if (!normalized) {
+            return '';
+        }
+
+        // Align common API version formats: v1.0 -> v1, 1.0 -> 1, v1.0.0 -> v1.
+        const zeroMinorVersionMatch = normalized.match(/^(v?)(\d+)(?:\.0+)+$/);
+        if (zeroMinorVersionMatch) {
+            return `${zeroMinorVersionMatch[1]}${zeroMinorVersionMatch[2]}`;
+        }
+
+        return normalized;
     }
 
     private normalizeRoutePath(value: string): string {

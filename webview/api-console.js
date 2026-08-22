@@ -29,6 +29,8 @@
     let restoredBinaryContentType = '';
     let restoredBinaryFileName = '';
     let isMockAllLoading = false;
+    let isSwaggerSyncLoading = false;
+    let hasSwaggerCache = false;
     let activeBaseUrlOptionIndex = -1;
     let panelSplitRatio = 0.5;
     const PANEL_STACK_THRESHOLD = 980;
@@ -1523,6 +1525,28 @@
         mockAllBtn.disabled = false;
     }
 
+    function updateSwaggerSyncButton() {
+        const swaggerSyncBtn = document.getElementById('swaggerSyncBtn');
+        if (!swaggerSyncBtn) {
+            return;
+        }
+
+        const tooltip = t('bodyMode.swaggerSyncTooltip') || 'Fetch Swagger and update the project cache';
+        swaggerSyncBtn.title = tooltip;
+        swaggerSyncBtn.setAttribute('aria-label', tooltip);
+
+        if (isSwaggerSyncLoading) {
+            swaggerSyncBtn.textContent = t('bodyMode.swaggerSyncing') || 'Syncing...';
+            swaggerSyncBtn.disabled = true;
+            return;
+        }
+
+        swaggerSyncBtn.textContent = hasSwaggerCache
+            ? (t('bodyMode.swaggerUpdate') || 'Update Swagger')
+            : (t('bodyMode.swaggerSync') || 'Sync Swagger');
+        swaggerSyncBtn.disabled = false;
+    }
+
     document.getElementById('binaryFileSelectBtn')?.addEventListener('click', () => {
         document.getElementById('binaryFileInput')?.click();
     });
@@ -1541,12 +1565,7 @@
         currentDebugState = 'starting';
         updateDebugButton();
 
-        vscode.postMessage({
-            type: 'startDebug',
-            data: {
-                baseUrl: getCurrentBaseUrl()
-            }
-        });
+        vscode.postMessage({ type: 'startDebug' });
     });
 
     document.getElementById('backToActionBtn')?.addEventListener('click', () => {
@@ -1566,14 +1585,24 @@
         }
 
         isMockAllLoading = true;
+        vscode.postMessage({ type: 'requestMockAll' });
+
+        updateMockAllButton();
+    });
+
+    document.getElementById('swaggerSyncBtn')?.addEventListener('click', () => {
+        if (isSwaggerSyncLoading) {
+            return;
+        }
+
+        isSwaggerSyncLoading = true;
+        updateSwaggerSyncButton();
         vscode.postMessage({
-            type: 'requestMockAll',
+            type: 'requestSwaggerSync',
             data: {
                 baseUrl: getCurrentBaseUrl()
             }
         });
-
-        updateMockAllButton();
     });
 
     // Auth type switching
@@ -1826,6 +1855,7 @@
             mockAllBtn.title = mockTooltip;
             mockAllBtn.setAttribute('aria-label', mockTooltip);
         }
+        updateSwaggerSyncButton();
         document.getElementById('formatJsonBtn').textContent = t('bodyMode.formatJson') || 'Format';
         const openResponseInEditorBtn = document.getElementById('openResponseInEditorBtn');
         if (openResponseInEditorBtn) {
@@ -2094,11 +2124,27 @@
 
                 if (appliedCount > 0) {
                     hasUserEditedRequest = true;
-                    showToast(t('bodyMode.mockLoadedSwaggerUrl') || 'Mock data generated from Swagger', 'success');
+                    showToast(t('bodyMode.mockLoadedSwaggerUrl') || 'Mock data generated from the local Swagger cache', 'success');
                 } else {
                     showToast(result.message || t('bodyMode.mockFailed') || 'No mock data available for this endpoint', 'info');
                 }
                 updateRequestTabBadges();
+                break;
+            }
+            case 'swaggerCacheStatus':
+                hasSwaggerCache = message.data?.hasCache === true;
+                updateSwaggerSyncButton();
+                break;
+            case 'swaggerSyncResult': {
+                isSwaggerSyncLoading = false;
+                hasSwaggerCache = message.data?.hasCache === true;
+                updateSwaggerSyncButton();
+
+                if (message.data?.success) {
+                    showToast(t('bodyMode.swaggerSyncSuccess') || 'Swagger synchronized successfully', 'success');
+                } else {
+                    showToast(message.data?.message || t('bodyMode.swaggerSyncFailed') || 'Failed to synchronize Swagger', 'error');
+                }
                 break;
             }
         }
@@ -2109,12 +2155,14 @@
         currentApiEndpoint = apiEndpoint;
         currentDebugState = 'idle';
         isMockAllLoading = false;
+        isSwaggerSyncLoading = false;
         hasUserEditedRequest = false;
         restoredBinaryBodyBase64 = '';
         restoredBinaryContentType = '';
         restoredBinaryFileName = '';
         updateDebugButton();
         updateMockAllButton();
+        updateSwaggerSyncButton();
 
         resetResponseDisplay();
 

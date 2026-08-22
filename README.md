@@ -107,6 +107,9 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 在 Body/Auth/Headers/Query 这一行右侧提供统一 `Mock` 按钮，一次生成并填充可用的 Query / Body / FormData 测试数据
   A unified `Mock` button is available on the Body/Auth/Headers/Query tab row to generate and fill Query / Body / FormData test data in one action
 
+- `Mock` 旁提供“同步 Swagger”按钮；检测到项目已有缓存时显示为“更新 Swagger”，点击后从当前 Base URL 获取最新文档并覆盖缓存
+  A `Sync Swagger` button is available next to `Mock`; it changes to `Update Swagger` when a project cache exists and refreshes the cache from the current Base URL when clicked
+
 - Mock 使用“单消息单返回”链路，避免并发双请求导致的状态错乱
   Mock uses a single-request single-response flow to avoid state conflicts caused by concurrent dual requests
 
@@ -119,8 +122,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - Swagger 文档会按项目持久化缓存到项目根目录的 `.vscode/` 下，默认文件名形如 `csharp-api-console-swagger-cache-*.json`
   Swagger documents are persisted per project under the project's `.vscode/` folder, with a file name like `csharp-api-console-swagger-cache-*.json`
 
-- Mock 时优先读取本地缓存；如果缓存无法匹配当前接口，才会重新拉取 Swagger 并覆盖缓存
-  Mock generation prefers the local cache first; if the cache cannot match the current endpoint, Swagger is fetched again and the cache is overwritten
+- Mock 仅使用本地缓存，不会自动请求 Swagger；没有缓存时会提示“同步 Swagger”，缓存无法生成数据时会提示“更新 Swagger”
+  Mock only uses the local cache and never fetches Swagger automatically; it prompts `Sync Swagger` when no cache exists and `Update Swagger` when the cache cannot generate data
 
 ## ⚙️ 配置 | Configuration
 
@@ -212,8 +215,8 @@ Search for `C# API Console` in VS Code settings:
 <Project Root>/.vscode/csharp-api-console-swagger-cache-*.json
 ```
 
-说明：缓存是按项目隔离的，不按 Swagger 地址分 key。首次成功拉取后会写入缓存，后续 Mock 优先使用该缓存。
-Note: the cache is isolated per project and does not use Swagger URL as the key. After the first successful fetch, the cache is written and subsequent Mock requests prefer that cache.
+说明：缓存是按项目隔离的，不按 Swagger 地址分 key。“同步 Swagger”成功后会写入缓存，后续 Mock 优先使用该缓存；也可点击“更新 Swagger”主动获取最新文档。
+Note: the cache is isolated per project and does not use Swagger URL as the key. A successful `Sync Swagger` writes the cache, subsequent Mock requests prefer it, and `Update Swagger` can be used to fetch the latest document explicitly.
 
 **示例文件内容 | Example file content**:
 

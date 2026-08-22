@@ -11,7 +11,6 @@
     "configuration.swaggerJsonPaths.description": "Mock 生成时在当前 Base URL 下使用的 Swagger/OpenAPI JSON 相对路径。默认值：/swagger/v1/swagger.json。",
     "configuration.swaggerAuthUsername.description": "请求当前 Base URL 下 Swagger/OpenAPI JSON 时使用的用户名。",
     "configuration.swaggerAuthPassword.description": "请求当前 Base URL 下 Swagger/OpenAPI JSON 时使用的密码。",
-    "configuration.silentSwaggerPrefetchOnDebugStart.description": "是否在调试启动成功后静默预拉 Swagger/OpenAPI JSON。开启后，Mock 可复用该在途请求。默认开启。",
     "configuration.largeResponseThresholdKb.description": "大响应降级渲染阈值（KB）。超过该值将使用纯文本降级渲染。",
     "configuration.maxResponseLineNumbers.description": "UI 中最多渲染的响应行号数量。",
     "configuration.jsonIndentSpaces.description": "请求格式化与响应美化时使用的 JSON 缩进空格数，仅支持 2 或 4。"

@@ -404,7 +404,7 @@ body {
     flex: 1;
 }
 
-.tab-mock-button {
+.tab-action-button {
     padding: 5px 12px;
     margin-left: 8px;
     margin-bottom: 2px;
@@ -417,11 +417,11 @@ body {
     line-height: 1.2;
 }
 
-.tab-mock-button:hover {
+.tab-action-button:hover {
     background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
-.tab-mock-button:disabled {
+.tab-action-button:disabled {
     cursor: not-allowed;
     opacity: 0.7;
 }

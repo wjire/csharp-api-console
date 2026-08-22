@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.3] - 2026-08-22
+
+### 中文
+
+#### Changed
+
+- 移除调试启动后的 Swagger 静默预拉及 `csharpApiConsole.silentSwaggerPrefetchOnDebugStart` 配置
+- 在 Mock 按钮旁新增“同步 Swagger”按钮；项目已有缓存时显示为“更新 Swagger”，点击后从当前 Base URL 获取最新文档并覆盖缓存
+- Mock 改为仅使用本地 Swagger 缓存；无缓存时提示同步，缓存无法生成数据时提示更新，不再自动请求 Swagger
+
+### English
+
+#### Changed
+
+- Removed silent Swagger prefetch after debug startup and the `csharpApiConsole.silentSwaggerPrefetchOnDebugStart` setting
+- Added a `Sync Swagger` button next to Mock; it changes to `Update Swagger` when the project already has a cache and refreshes that cache from the current Base URL when clicked
+- Changed Mock to use only the local Swagger cache; it now prompts for synchronization when no cache exists and for an update when cached data cannot generate a mock, without fetching Swagger automatically
+
 ## [1.2.2] - 2026-07-31
 
 ### 中文

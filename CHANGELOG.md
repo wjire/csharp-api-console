@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.4] - 2026-10-09
+
+### 中文
+
+#### Added
+
+- 在“启动调试”按钮右侧新增启动配置下拉框，列出项目 `launchSettings.json` 中的 Project profiles，默认选择第一个可用配置
+- 切换配置时同步 Base URL；有选中配置时先构建，再使用 `coreclr` 的标准 profile 参数启动，读取对应的环境变量、监听地址及命令行参数
+
+#### Fixed
+
+- 修复所选 profile 无法启动的问题：移除手工拼接的 C# Dev Kit 配置 ID（如 `TargetFramework=net10.0;Profile=http`），避免“无法设置为活动配置”的错误
+
+### English
+
+#### Added
+
+- Added a launch profile dropdown next to Start Debug, listing Project profiles from the project's `launchSettings.json` and selecting the first available profile by default
+- Switching profiles updates the Base URL; selected profiles are built and launched through the documented `coreclr` profile options, using their environment variables, application URLs and command-line arguments
+
+#### Fixed
+
+- Fixed selected-profile launch failures by removing synthetic C# Dev Kit configuration IDs such as `TargetFramework=net10.0;Profile=http`, avoiding errors when activating the launch configuration
+
 ## [1.2.3] - 2026-08-22
 
 ### 中文

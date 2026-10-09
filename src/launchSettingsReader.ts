@@ -1,18 +1,34 @@
-import * as path from 'path';
 import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * launchSettings.json 配置读取器
  */
 export class LaunchSettingsReader {
+    static getProjectProfileNames(projectPath: string | undefined): string[] {
+        try {
+            const profiles = this.readLaunchSettings(projectPath)?.profiles;
+            if (!profiles || typeof profiles !== 'object' || Array.isArray(profiles)) {
+                return [];
+            }
+
+            return Object.entries(profiles)
+                .filter(([, profile]) => (profile as any)?.commandName === 'Project')
+                .map(([name]) => name);
+        } catch (error) {
+            console.error('Failed to read launchSettings.json profiles:', error);
+            return [];
+        }
+    }
+
     /**
      * 从项目路径读取 launchSettings.json 并获取 Base URL
      * @param projectPath .csproj 文件路径
      * @returns Base URL (如：http://localhost:5000) 或 null
      */
-    static getBaseUrl(projectPath: string | undefined): string | null {
+    static getBaseUrl(projectPath: string | undefined, profileName?: string): string | null {
         try {
-            const projectProfile = this.getProjectProfile(projectPath);
+            const projectProfile = this.getProjectProfile(projectPath, profileName);
             if (!projectProfile) {
                 return null;
             }
@@ -71,9 +87,9 @@ export class LaunchSettingsReader {
      * @param projectPath .csproj 文件路径
      * @returns 环境变量键值对
      */
-    static getEnvironmentVariables(projectPath: string | undefined): Record<string, string> {
+    static getEnvironmentVariables(projectPath: string | undefined, profileName?: string): Record<string, string> {
         try {
-            const projectProfile = this.getProjectProfile(projectPath);
+            const projectProfile = this.getProjectProfile(projectPath, profileName);
             if (!projectProfile) {
                 return {};
             }
@@ -102,13 +118,18 @@ export class LaunchSettingsReader {
     /**
      * 获取 launchSettings.json 中 commandName=Project 的 profile
      */
-    private static getProjectProfile(projectPath: string | undefined): any | null {
+    private static getProjectProfile(projectPath: string | undefined, profileName?: string): any | null {
         const json = this.readLaunchSettings(projectPath);
         if (!json) {
             return null;
         }
 
         const profiles = json.profiles ?? {};
+        if (profileName !== undefined) {
+            const selectedProfile = profiles[profileName];
+            return selectedProfile?.commandName === 'Project' ? selectedProfile : null;
+        }
+
         const projectProfile = Object.values(profiles).find(
             (p: any) => p.commandName === 'Project'
         ) as any;

@@ -271,7 +271,7 @@ export class ApiConsolePanel {
                 await this.saveSharedAuth(message.data?.baseUrl, message.data?.token);
                 break;
             case 'startDebug':
-                await this.startDebugSession();
+                await this.startDebugSession(message.data?.profileName);
                 break;
             case 'backToAction':
                 await this.backToAction();
@@ -429,6 +429,15 @@ export class ApiConsolePanel {
             data: this.getRenderSettings()
         });
 
+        const profileNames = LaunchSettingsReader.getProjectProfileNames(this.currentProjectPath);
+        this.panel.webview.postMessage({
+            type: 'launchProfiles',
+            data: profileNames.map(name => ({
+                name,
+                baseUrl: LaunchSettingsReader.getBaseUrl(this.currentProjectPath, name)
+            }))
+        });
+
         await this.loadBaseUrls();
         await this.loadRequestState();
         await this.loadSharedAuth();
@@ -481,7 +490,7 @@ export class ApiConsolePanel {
     /**
      * 启动调试会话（携带 launchSettings.json 环境变量）
      */
-    private async startDebugSession(): Promise<void> {
+    private async startDebugSession(profileName?: unknown): Promise<void> {
         if (!this.currentProjectPath) {
             this.postDebugStatus('error', lang.t('webview.debug.noProject'));
             return;
@@ -492,9 +501,18 @@ export class ApiConsolePanel {
             return;
         }
 
+        const profileNames = LaunchSettingsReader.getProjectProfileNames(this.currentProjectPath);
+        const selectedProfileName = typeof profileName === 'string' && profileName.length > 0
+            ? profileName
+            : profileNames[0];
+        if (selectedProfileName && !profileNames.includes(selectedProfileName)) {
+            this.postDebugStatus('error', lang.t('webview.debug.profileNotFound', selectedProfileName));
+            return;
+        }
+
         this.postDebugStatus('starting');
 
-        const env = LaunchSettingsReader.getEnvironmentVariables(this.currentProjectPath);
+        const env = LaunchSettingsReader.getEnvironmentVariables(this.currentProjectPath, selectedProfileName);
         const workspaceFolder = this.getWorkspaceFolderForCurrentProject();
         const normalizedProjectPath = ApiConsolePanel.normalizeProjectPath(this.currentProjectPath);
         const projectName = this.getProjectNameFromPath(this.currentProjectPath);
@@ -504,7 +522,12 @@ export class ApiConsolePanel {
         const targetFrameworks = this.getTargetFrameworksFromProject(this.currentProjectPath);
         const selectedFramework = this.selectPreferredTargetFramework(targetFrameworks);
 
-        const debugConfiguration: vscode.DebugConfiguration = this.shouldUseCoreClrDebug(selectedFramework)
+        if (selectedProfileName && !selectedFramework) {
+            this.postDebugStatus('error', lang.t('webview.debug.profileMissingFramework'));
+            return;
+        }
+
+        const debugConfiguration: vscode.DebugConfiguration = selectedProfileName || this.shouldUseCoreClrDebug(selectedFramework)
             ? this.createCoreClrDebugConfiguration(debugName, this.currentProjectPath, env, selectedFramework)
             : {
                 name: debugName,
@@ -513,6 +536,13 @@ export class ApiConsolePanel {
                 projectPath: this.currentProjectPath,
                 env
             };
+
+        if (selectedProfileName) {
+            debugConfiguration.launchSettingsProfile = selectedProfileName;
+            debugConfiguration.launchSettingsFilePath = path.join(
+                path.dirname(this.currentProjectPath), 'Properties', 'launchSettings.json'
+            );
+        }
 
         if (debugConfiguration.type === 'coreclr') {
             this.postDebugStatus('starting', lang.t('webview.debug.building'));

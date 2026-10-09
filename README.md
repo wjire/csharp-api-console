@@ -65,8 +65,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 在请求栏中提供 **启动调试** 按钮（位于 Send 左侧），可在发送 API 请求前快速启动当前项目调试
   A **Start Debug** button is available in the request bar (left of Send) to quickly start debugging before sending API requests
 
-- 启动调试时自动遵循项目 `launchSettings.json` 配置（包括环境变量）
-  Debug start follows project `launchSettings.json` configuration (including environment variables)
+- 在“启动调试”右侧的下拉框中选择项目 `launchSettings.json` 的 Project profile，默认选择第一个可用配置；切换配置时同步 Base URL，启动时使用选中配置的环境变量、监听地址及命令行参数
+  Select a Project profile from the dropdown next to Start Debug. The first available profile is selected by default; switching updates the Base URL, and debugging uses the selected profile's environment variables, application URLs and command-line arguments
 
 - 支持多项目并行调试：仅阻止同项目重复启动，不影响其他项目调试
   Supports multi-project concurrent debugging: only blocks duplicate starts for the same project
@@ -74,8 +74,8 @@ Test APIs and start debugging with one click directly in your code editor - no t
 - 调试状态自动同步：通过工具栏停止、命令面板停止或 `Shift+F5` 结束会话后，按钮状态会自动恢复
   Debug status syncs automatically: when a session ends via toolbar stop, command palette stop, or `Shift+F5`, button state resets automatically
 
-- 按目标框架自动选择调试器：`net5.0+` 默认使用 `dotnet`，`netcoreapp` 等旧框架自动回退 `coreclr`，兼容旧项目调试
-  Automatically selects debugger by target framework: uses `dotnet` for `net5.0+`, and falls back to `coreclr` for older frameworks such as `netcoreapp` for better legacy compatibility
+- 有选中 Project profile 时使用 `coreclr` 的标准 `launchSettingsProfile` 参数启动（包括 .NET 10），不依赖 C# Dev Kit 的内部配置 ID；没有 profile 时，`net5.0+` 保留 `dotnet` 启动，旧框架使用 `coreclr`
+  Selected Project profiles use `coreclr` with the documented `launchSettingsProfile` option, including .NET 10, without depending on C# Dev Kit's internal configuration IDs. Without a profile, `net5.0+` retains `dotnet` debugging and older frameworks use `coreclr`
 
 - `coreclr` 启动调试前会先自动执行 Debug 构建（按目标框架）；若构建失败会取消启动并提示，若构建后仍缺失 DLL 则显示缺失程序集路径
   Before `coreclr` debug launch, the extension automatically runs a Debug build first (by target framework); if build fails, launch is canceled with a friendly message, and if DLL is still missing after build, the missing assembly path is shown
